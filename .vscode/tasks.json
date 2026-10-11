@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build Descent SlikeNet",
+			"label": "Build D2x-Redux-SLikeNet",
 			"type": "shell",
 			"command": "C:/Programs/msys64/msys2_shell.cmd",
 			"args": [
@@ -33,7 +33,7 @@
 				"-defterm",
 				"-no-start",
 				"-lc",
-				"./D2x-Redux-SLikeNet.exe -window -background -nostickykeys"
+				"./D2x-Redux-SLikeNet.exe -window -notitles -nostickykeys"
 			],
 			"group": {
 				"kind": "test",
