@@ -1,0 +1,166 @@
+/*
+THE COMPUTER CODE CONTAINED HEREIN IS THE SOLE PROPERTY OF PARALLAX
+SOFTWARE CORPORATION ("PARALLAX").  PARALLAX, IN DISTRIBUTING THE CODE TO
+END-USERS, AND SUBJECT TO ALL OF THE TERMS AND CONDITIONS HEREIN, GRANTS A
+ROYALTY-FREE, PERPETUAL LICENSE TO SUCH END-USERS FOR USE BY SUCH END-USERS
+IN USING, DISPLAYING,  AND CREATING DERIVATIVE WORKS THEREOF, SO LONG AS
+SUCH USE, DISPLAY OR CREATION IS FOR NON-COMMERCIAL, ROYALTY OR REVENUE
+FREE PURPOSES.  IN NO EVENT SHALL THE END-USER USE THE COMPUTER CODE
+CONTAINED HEREIN FOR REVENUE-BEARING PURPOSES.  THE END-USER UNDERSTANDS
+AND AGREES TO THE TERMS HEREIN AND ACCEPTS THE SAME BY USE OF THIS FILE.
+COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
+*/
+
+/*
+ *
+ * Header for playsave.c
+ *
+ */
+
+
+#ifndef _PLAYSAVE_H
+#define _PLAYSAVE_H
+
+#include "kconfig.h"
+#include "mission.h"
+#include "weapon.h"
+#include "multi.h"
+#include "escort.h"
+
+#define N_SAVE_SLOTS    10
+#define GAME_NAME_LEN   25      // +1 for terminating zero = 26
+
+#define MOUSE_CONTROL_FLIGHT_SIM 1   /* Old School Mouse */
+#define MOUSE_CONTROL_REBIRTH 0
+#define MOUSE_CONTROL_OLDSCHOOL 2
+
+typedef struct hli {
+	char	Shortname[9];
+	ubyte	LevelNum;
+} hli;
+
+typedef struct player_config
+{
+	ubyte ControlType;
+	ubyte PrimaryOrder[MAX_PRIMARY_WEAPONS+1];
+	ubyte SecondaryOrder[MAX_SECONDARY_WEAPONS+1];
+	ubyte KeySettings[3][MAX_CONTROLS];
+	ubyte ObserverControlSettings[NUM_OBSERVER_BINDING_TYPES][NUM_OBSERVER_BINDING_SLOTS];
+	ubyte KeySettingsD2X[MAX_D2X_CONTROLS];
+	int DefaultDifficulty;
+	int AutoLeveling;
+	short NHighestLevels;
+	hli HighestLevels[MAX_MISSIONS];
+	int KeyboardSens[5];
+	int JoystickSens[6];
+	int JoystickDead[6];
+	int JoystickUndercalibrate[6];
+	ubyte MouseControlStyle; /* Old School Mouse -- ubyte MouseFlightSim; */ 
+	int MouseImpulse; /* Old School Mouse */ 
+	int MouseSens[6];
+    int MouseOverrun[6];
+	int MouseFSDead;
+	int MouseFSIndicator;
+	int PreferredCockpitMode;
+	int CurrentCockpitMode; // Also includes letterbox/rear, which are not persisted in the player profile
+	int Cockpit3DView[2];
+	char NetworkMessageMacro[4][MAX_MESSAGE_LEN];
+	int NetlifeKills;
+	int NetlifeKilled;
+	ubyte ReticleType;
+	int ReticleRGBA[4];
+	int ReticleSize;
+	int MissileViewEnabled;
+	int HeadlightActiveDefault;
+	int GuidedInBigWindow;
+	char GuidebotName[GUIDEBOT_NAME_LEN+1];
+	char GuidebotNameReal[GUIDEBOT_NAME_LEN+1];
+	int HudMode;
+	int EscortHotKeys;
+	int PersistentDebris;
+	int PRShot;
+	int DemoRecordingIndicator;
+	ubyte NoRedundancy;
+	ubyte MultiMessages;
+	ubyte NoRankings;
+	ubyte BombGauge;
+	ubyte AutomapFreeFlight;
+	ubyte NoFireAutoselect;
+	ubyte CycleAutoselectOnly;
+	ubyte VulcanAmmoWarnings;
+	ubyte ShieldWarnings;
+	ubyte AutoDemoSp;
+	ubyte AutoDemoMp;
+	ubyte AutoDemoHideUi;
+	ubyte ShowCustomColors;
+	ubyte ShowSpeedrunTimers;  // show the IGT/RTA speedrun timers on the HUD
+	ubyte ShowVelocityMeter;   // show the velocity/rotation HUD readout
+	ubyte PreferMyTeamColors;
+	ubyte QuietPlasma;
+	int AlphaEffects;
+	int DynLightColor;
+	ubyte DisableCockpit;  /* DisableCockpit */
+	ubyte StickyRearview; /* StickyRearview */
+	ubyte SelectAfterFire; /* SelectAfterFire */
+	int maxFps;
+	int ShipColor;
+	int MissileColor;
+	int MyTeamColor;
+	int OtherTeamColor;
+	ubyte ObsShareSettings;
+	ubyte ObsTurbo[NUM_OBS_MODES];
+	ubyte ObsShowCockpit[NUM_OBS_MODES];
+	ubyte ObsShowScoreboardShieldText[NUM_OBS_MODES];
+	ubyte ObsShowScoreboardShieldBar[NUM_OBS_MODES];
+	ubyte ObsShowAmmoBars[NUM_OBS_MODES];
+	ubyte ObsShowPrimary[NUM_OBS_MODES];
+	ubyte ObsShowSecondary[NUM_OBS_MODES];
+	ubyte ObsShowNames[NUM_OBS_MODES];
+	ubyte ObsShowDamage[NUM_OBS_MODES];
+	ubyte ObsShowShieldText[NUM_OBS_MODES];
+	ubyte ObsShowShieldBar[NUM_OBS_MODES];
+	ubyte ObsShowKillFeed[NUM_OBS_MODES];
+	ubyte ObsShowDeathSummary[NUM_OBS_MODES];
+	ubyte ObsShowStreaks[NUM_OBS_MODES];
+	ubyte ObsShowKillGraph[NUM_OBS_MODES];
+	ubyte ObsShowBreakdown[NUM_OBS_MODES];
+	ubyte ObsShowObs[NUM_OBS_MODES];
+	ubyte ObsChat[NUM_OBS_MODES];
+	ubyte ObsPlayerChat[NUM_OBS_MODES];
+	ubyte ObsShowBombTimes[NUM_OBS_MODES];
+	ubyte ObsTransparentThirdPerson[NUM_OBS_MODES];
+	ubyte ObsIncreaseThirdPersonDist[NUM_OBS_MODES];
+	ubyte ObsHideEnergyWeaponMuzzle[NUM_OBS_MODES];
+	ubyte NoChatSound;
+	ubyte ClassicAutoselectWeapon;
+	ubyte AutoselectOnlyOnce;
+} __pack__ player_config;
+
+extern struct player_config PlayerCfg;
+
+#ifndef EZERO
+#define EZERO 0
+#endif
+
+extern int Default_leveling_on;
+
+// Used to save kconfig values to disk.
+int write_player_file();
+
+int new_player_config();
+
+int read_player_file();
+
+// set a new highest level for player for this mission
+void set_highest_level(int levelnum);
+
+// gets the player's highest level from the file for this mission
+int get_highest_level(void);
+
+void read_netgame_profile(netgame_info *ng);
+void write_netgame_profile(netgame_info *ng);
+
+int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_name);
+int write_netgame_settings_file(const char *filename, netgame_info *ng, int no_name);
+
+#endif /* _PLAYSAVE_H */

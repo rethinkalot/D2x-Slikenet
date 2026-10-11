@@ -1,0 +1,82 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Descent SlikeNet",
+			"type": "shell",
+			"command": "C:/Programs/msys64/msys2_shell.cmd",
+			"args": [
+				"-mingw64",
+				"-where",
+				"C:/Games/D2s",
+				"-defterm",
+				"-no-start",
+				"-lc",
+				"export PATH=/c/Programs/msys64/mingw64/bin:$PATH; cmake -G Ninja -B build; status=$?; if [ $status -ne 0 ]; then exit $status; fi; cmake --build build -- -j10; status=$?; if [ $status -ne 0 ]; then exit $status; fi; if [ -f build/main/d2x-redux.exe ]; then cp -v build/main/d2x-redux.exe /c/Games/D2x/d2x-redux.exe; for dll in SDL.dll physfs.dll SDL_mixer.dll zlib1.dll zlibd1.dll glew32.dll glew32d.dll libpng16.dll libpng16d.dll libgcc_s_seh-1.dll libstdc++-6.dll libwinpthread-1.dll; do if [ -f build/main/$dll ]; then cp -v build/main/$dll /c/Games/D2x/$dll; fi; done; else echo Build completed, but no expected executable was found. >&2; exit 1; fi"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$gcc"
+			]
+		},
+		{
+			"label": "Run Live Testbench Game Session",
+			"type": "shell",
+			"command": "C:/Programs/msys64/msys2_shell.cmd",
+			"args": [
+				"-mingw64",
+				"-where",
+				"C:/Games/D2x",
+				"-defterm",
+				"-no-start",
+				"-lc",
+				"./d2x-redux.exe -window -background -nostickykeys"
+			],
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "cmake",
+			"label": "CMake: build",
+			"command": "build",
+			"targets": [
+				"all"
+			],
+			"group": "build",
+			"problemMatcher": [],
+			"detail": "CMake template build task"
+		},
+		{
+			"label": "Configure D2s CMake",
+			"type": "shell",
+			"command": "C:\\Programs\\msys64\\mingw64\\bin\\cmake.exe",
+			"args": [
+				"-G",
+				"Ninja",
+				"-S",
+				"C:\\Games\\D2s",
+				"-B",
+				"C:\\Games\\D2s\\build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Reconfigure D2s CMake",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/c",
+				"del /q C:\\Games\\D2s\\build\\CMakeCache.txt && rmdir /s /q C:\\Games\\D2s\\build\\CMakeFiles && C:\\Programs\\msys64\\mingw64\\bin\\cmake.exe -G Ninja -S C:\\Games\\D2s -B C:\\Games\\D2s\\build"
+			],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
