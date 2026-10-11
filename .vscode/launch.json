@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "d2x-redux.exe",
+            "name": "D2x-Redux-SLikeNet.exe",
             "type": "cppdbg",
             "request": "launch",
-            "program": "C:/Games/D2x/d2x-redux.exe",
+            "program": "C:/Games/D2x/D2x-Redux-SLikeNet.exe",
             "args": [
                 "-window",
                 "-background",
