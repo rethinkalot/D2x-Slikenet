@@ -68,6 +68,19 @@ extern void newdemo_record_guided_start();
 
 int find_homing_object(vms_vector *curpos, object *tracker);
 
+// D1-style weapon behavior toggle.
+// Multiplayer: the host's "Original D1 Weapons" netgame option has full
+// authority -- the local single-player preference is ignored so clients can
+// never diverge from the host's simulation.
+// Single-player: the Misc Options "Original D1 Weapons (SP)" checkbox,
+// applied on the fly.
+static int using_original_d1_weapons(void)
+{
+	if (Game_mode & GM_MULTI)
+		return Netgame.OriginalD1Weapons;
+	return PlayerCfg.OriginalD1Weapons;
+}
+
 //---------------------------------------------------------------------------------
 // Called by render code.... determines if the laser is from a robot or the
 // player and calls the appropriate routine.
@@ -679,7 +692,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		obj->mtype.phys_info.flags |= PF_STICK;		//this obj sticks to walls
 
 	obj->shields = Weapon_info[obj->id].strength[Difficulty_level];
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+	if( using_original_d1_weapons()) {
 		if(obj->id == 0) {        // Laser 1
 			obj->shields = 10 * F1_0; 
 		} else if(obj->id == 1) { // Laser 2
@@ -810,7 +823,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 	if (Weapon_info[obj->id].thrust != 0)
 		weapon_speed /= 2;
 
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+	if( using_original_d1_weapons()) {
 		if(obj->id == 12) { // Spread
 			weapon_speed = 200 * F1_0; 
 		} 
@@ -1266,7 +1279,7 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 	vm_vec_add(&LaserPos,&obj->pos,&gun_point);
 
 	fix weapon_speed = Weapon_info[laser_type].speed[Difficulty_level];
-	if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+	if( using_original_d1_weapons()) {
 		if(laser_type == 12) { // Spread
 			weapon_speed = 200 * F1_0; 
 		} 
@@ -1533,7 +1546,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				temp_vec = obj->mtype.phys_info.velocity;
 				speed = vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
-				if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+				if( using_original_d1_weapons()) {
 					if(obj->id == 12) { // Spread
 						max_speed = 200 * F1_0; 
 					} 
@@ -1616,7 +1629,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 		fix	weapon_speed;
 
 		fix max_weapon_speed = Weapon_info[obj->id].speed[Difficulty_level];
-		if( (Game_mode & GM_MULTI) && Netgame.OriginalD1Weapons) {
+		if( using_original_d1_weapons()) {
 			if(obj->id == 12) { // Spread
 				max_weapon_speed = 200 * F1_0; 
 			} 

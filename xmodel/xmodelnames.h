@@ -235,7 +235,7 @@ const char *xmodelnames[] = {
 	"shield.ase",
 	"energy.ase",
 	"afterburner.ase",
-	"armorack.ase",
+	"ammorack.ase",
 	"converter.ase",
 	"eshaker.ase",
 	"eshakersub.ase",

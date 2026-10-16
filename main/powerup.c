@@ -129,16 +129,52 @@ void draw_powerup(object *obj)
 		if (obj->id == POW_EXTRA_LIFE || obj->id == POW_ENERGY ||
 			obj->id == POW_SHIELD_BOOST || obj->id == POW_CLOAK ||
 			obj->id == POW_INVULNERABILITY)
-			angles.p = 0;
+		{
+			// Shield rides at a fixed ~27-degree vertical tilt (D1 look) so its
+			// bolt ring reads diagonal while it yaws; the rest of this group
+			// stays level.
+			if (obj->id == POW_SHIELD_BOOST)
+				angles.p = F1_0 * 27 / 360;
+			else
+				angles.p = 0;
+		}
 		else if (obj->id == POW_QUAD_FIRE)
 			angles.p = F1_0 / 12;
 		else if (obj->id == POW_GAUSS_WEAPON)
 			angles.p = -F1_0 * 103 / 360;
+		else if (obj->id == POW_PHOENIX_WEAPON)
+		{
+			// Phoenix: p = 13°, b = 0° — perfect, leave untouched.
+			angles.p = F1_0 * 13 / 360;
+		}
+		else if (obj->id == POW_SUPER_LASER)
+		{
+			// Super Laser: ASE is authored barrel-up at p=0; p=90° lays the
+			// barrel horizontal (correct face up), then back off 30° so the
+			// barrel points up at a 30° angle.
+			angles.p = F1_0 * 60 / 360;
+		}
+		else if (obj->id == POW_AFTERBURNER)
+		{
+			// Afterburner sits tilted with red side facing player; tip ~90�
+			// up then flatten by ~13� so red faces up, then roll 180�
+			// around long axis to swap brown top <-> colors bottom.
+			// Heading offset 45� added for proper orientation.
+			angles.p = F1_0 * 77 / 360;
+			angles.b = F1_0 * 180 / 360;
+		}
+		else if (obj->id == POW_OMEGA_WEAPON)
+		{
+			// omega.ase is authored upside down; final nudge: back to 65,
+			// then up 4 -> 69 to match plasma tilt.
+			angles.p = F1_0 * 69 / 360;
+		}
 		else
 			angles.p = obj->id == POW_LASER ||
 				(obj->id >= POW_VULCAN_WEAPON && obj->id <= POW_FUSION_WEAPON) ?
 				F1_0 / 4 - F1_0 / 20 : F1_0 * 7 / 8;
-		angles.b = 0;
+		if (obj->id != POW_AFTERBURNER)
+			angles.b = 0;
 		fix64 rotation_duration = (fix64)Vclip[vclip_num].num_frames * Vclip[vclip_num].frame_time;
 		if (obj->id == POW_SHIELD_BOOST || obj->id == POW_CLOAK ||
 			obj->id == POW_EXTRA_LIFE || obj->id == POW_INVULNERABILITY)
@@ -146,6 +182,8 @@ void draw_powerup(object *obj)
 		else if (obj->id == POW_PROXIMITY_WEAPON)
 			rotation_duration *= 2;
 		angles.h = (fixang)(GameTime64 * F1_0 / rotation_duration);
+		if (obj->id == POW_AFTERBURNER)
+			angles.h += F1_0 * 225 / 360;
 		vm_angles_2_matrix(&orient, &angles);
 
 		if (xmodel_show_if_loaded(XM_POWERUP, obj->id, &obj->pos, &orient, -1, &lrgb))
@@ -172,7 +210,10 @@ void powerup_basic(int redadd, int greenadd, int blueadd, int score, const char 
 	va_list	args;
 
 	va_start(args, format );
-	HUD_init_message_va(HM_DEFAULT, format, args);
+	// Pickup lines are classed HM_REDUNDANT so "No redundant pickup messages"
+	// suppresses them wholesale (SP and MP). Guide-Bot uses buddy_message() and
+	// warnings use their own HM_MULTI messages, so both are unaffected here.
+	HUD_init_message_va(HM_DEFAULT|HM_REDUNDANT, format, args);
 	va_end(args);
 
 	if (!reduced_flash_wanted())
@@ -773,3 +814,4 @@ extern int powerup_type_info_read_n(powerup_type_info *pti, int n, PHYSFS_file *
 	}
 	return i;
 }
+

@@ -134,6 +134,7 @@ typedef struct player_config
 	ubyte NoChatSound;
 	ubyte ClassicAutoselectWeapon;
 	ubyte AutoselectOnlyOnce;
+	ubyte OriginalD1Weapons;
 } __pack__ player_config;
 
 extern struct player_config PlayerCfg;

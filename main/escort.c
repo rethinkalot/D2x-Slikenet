@@ -417,7 +417,7 @@ void buddy_message(char * format, ... )
 			gb_str[t+2] = BM_XRGB(0, 31, 0);
 			gb_str[t+3] = 0;
 
-			HUD_init_message(HM_DEFAULT, "%s %s", gb_str, new_format);
+			HUD_init_message(HM_DEFAULT|HM_GUIDEBOT, "%s %s", gb_str, new_format);
 
 			Last_buddy_message_time = GameTime64;
 		}
@@ -475,11 +475,11 @@ void set_escort_special_goal(int special_key)
 
 			for (i=0; i<=Highest_object_index; i++)
 				if ((Objects[i].type == OBJ_ROBOT) && Robot_info[Objects[i].id].companion) {
-					HUD_init_message(HM_DEFAULT, "%s has not been released.",PlayerCfg.GuidebotName);
+					HUD_init_message(HM_DEFAULT|HM_GUIDEBOT, "%s has not been released.",PlayerCfg.GuidebotName);
 					break;
 				}
 			if (i == Highest_object_index+1)
-				HUD_init_message_literal(HM_DEFAULT, "No Guide-Bot in mine.");
+				HUD_init_message_literal(HM_DEFAULT|HM_GUIDEBOT, "No Guide-Bot in mine.");
 
 			return;
 		}
@@ -1721,7 +1721,7 @@ void do_escort_menu(void)
 	window *wind;
 
 	if (Game_mode & GM_MULTI) {
-		HUD_init_message_literal(HM_DEFAULT, "No Guide-Bot in Multiplayer!");
+		HUD_init_message_literal(HM_DEFAULT|HM_GUIDEBOT, "No Guide-Bot in Multiplayer!");
 		return;
 	}
 
@@ -1733,7 +1733,7 @@ void do_escort_menu(void)
 
 	if (i > Highest_object_index) {
 
-		HUD_init_message_literal(HM_DEFAULT, "No Guide-Bot present in mine!");
+		HUD_init_message_literal(HM_DEFAULT|HM_GUIDEBOT, "No Guide-Bot present in mine!");
 
 		#if 0	//ndef NDEBUG	// Just use HELPVISHNU!!
 		//	If no buddy bot, create one!
@@ -1747,7 +1747,7 @@ void do_escort_menu(void)
 	ok_for_buddy_to_talk();	//	Needed here or we might not know buddy can talk when he can.
 
 	if (!Buddy_allowed_to_talk) {
-		HUD_init_message(HM_DEFAULT, "%s has not been released",PlayerCfg.GuidebotName);
+		HUD_init_message(HM_DEFAULT|HM_GUIDEBOT, "%s has not been released",PlayerCfg.GuidebotName);
 		return;
 	}
 
