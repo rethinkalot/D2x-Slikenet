@@ -258,7 +258,7 @@ void ogl_smash_texture_list_internal(void){
 }
 
 int ogl_allow_png(void){
-	return !(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures;
+	return GameCfg.UseCustomTextures && (!(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures);
 }
 
 void ogl_smash_png_textures(void){
@@ -269,6 +269,21 @@ void ogl_smash_png_textures(void){
 			ogl_texture_list[i].handle=0;
 		}
 	}
+}
+
+// Cheap path for toggling Custom Textures from the Graphics Options menu.
+//
+// ogl_cache_level_textures() eagerly walks EVERY bitmap and re-uploads it, then
+// reloads every 3D model. That is correct but very slow mid-game, and for a
+// pure custom-texture toggle it is mostly wasted work: only the PNG-backed
+// entries can differ, because the plain bitmap data in GameBitmaps is untouched.
+//
+// So drop just the PNG textures and let ogl_bindbmtex() repopulate them lazily
+// as they are actually drawn (see ogl_bindbmtex, which reloads any bitmap whose
+// gltexture handle is 0). Textures in view therefore appear within a frame or
+// two, and we never pay to rebuild ones the player is not looking at.
+void ogl_recache_custom_textures(void){
+	ogl_smash_png_textures();
 }
 
 ogl_texture* ogl_get_free_texture(void){

@@ -94,6 +94,10 @@ void ogl_end_frame(void);
 void ogl_swap_buffers_internal(void);
 void ogl_set_screen_mode(void);
 void ogl_cache_level_textures(void);
+// Drops only the PNG (custom texture) entries and lets them reload lazily as
+// they are drawn. Much cheaper than ogl_cache_level_textures() for toggling the
+// Custom Textures option mid-game.
+void ogl_recache_custom_textures(void);
 
 void ogl_urect(int left, int top, int right, int bot);
 bool ogl_ubitmapm_cs(int x, int y,int dw, int dh, grs_bitmap *bm,int c, int scale);

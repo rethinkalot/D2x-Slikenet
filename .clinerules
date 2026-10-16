@@ -27,6 +27,21 @@ If a turn ends with any command neither run nor approved, name those
 commands in plain text. Never guess at whether a prompt was dismissed --
 the disclosure covers it.
 
+# Token Optimization Rules
+- DO NOT over-analyze or over-think simple tasks. 
+- State your plan in 1-2 sentences maximum before executing a tool.
+- Avoid multi-step planning loops for straightforward file modifications.
+- Do not read entire files if you only need to look at a specific function; use targeted grep or line-specific tools instead.
+- ABSOLUTELY NO internal monologues or conversational summaries of your rules.
+- Treat every command as an isolated action; do not write a "post-mortem" explanation after a command finishes unless it fails.
+- If a file can be edited via a targeted regex patch, do not rewrite the whole file.
+
+## Loop Prevention (Circuit Breaker)
+- If a tool execution returns a successful or expected result, ACCEPT IT and move on.
+- DO NOT re-read or verify a file you just successfully modified unless it throws an error.
+- "Good enough is perfect." Do not optimize code structure or styling unless explicitly ordered to do so.
+- Limit your loop to exactly ONE tool execution per user prompt for basic tasks.
+
 ## General
 - Prefer the file reader over the terminal where it can do the job.
 - No exploratory or decorative commands. Only run what produces output

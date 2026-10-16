@@ -1453,6 +1453,8 @@ void graphics_config()
 	int old_multisample = GameCfg.Multisample;
 	int old_custommodels = GameCfg.UseCustomModels;
 
+	int old_customtextures = GameCfg.UseCustomTextures;
+
 #ifdef OGL
 	for (i = 0; i <= 3; i++)
 		if (m[i+opt_gr_texfilt].value)
@@ -1494,21 +1496,83 @@ void graphics_config()
 
 #ifdef OGL
 	// Only rebuild the texture cache when something that affects it changed.
+	// Toggling Custom Textures is the slowest case (it re-reads the custom
+	// texture override tables), so tell the player what is happening rather
+	// than leaving the screen frozen with no feedback.
 	{
 		int texfilt_dirty     = (GameCfg.TexFilt != old_texfilt);
 		int multisample_dirty = (GameCfg.Multisample != old_multisample);
 		int models_dirty      = (GameCfg.UseCustomModels != old_custommodels);
+		int ctex_dirty        = (GameCfg.UseCustomTextures != old_customtextures);
 
-		if (texfilt_dirty || multisample_dirty || models_dirty)
+		if (texfilt_dirty || multisample_dirty || models_dirty || ctex_dirty)
 		{
-			// Draw and FLIP the message before the blocking work starts, so it
-			// is actually visible during the pause instead of appearing after.
-			show_boxed_message("Applying Texture Settings...", 0);
+			// When ONLY custom textures changed, direction matters: the PNG path
+			// loads lazily per bitmap (see ogl_loadbmtexture_f, which early-exits
+			// when a valid GL handle is already resident).
+			//
+			// When ONLY 3D models changed, touch nothing but the models: the ASE
+			// parse/free already happened above via xmodel_load_all() /
+			// xmodel_free_all(), and each model's own textures GL-upload lazily
+			// on first draw. This keeps the models toggle from re-paging
+			// GameBitmaps, which belongs to Custom Textures only.
+			//
+			// Anything else (filtering, multisample) genuinely needs the
+			// full rebuild, because those settings are baked into every texture
+			// that is already resident.
+			int only_ctex = ctex_dirty && !texfilt_dirty && !multisample_dirty && !models_dirty;
+			int only_models = models_dirty && !texfilt_dirty && !multisample_dirty && !ctex_dirty;
 
-			gr_set_attributes();
-			gr_set_mode(Game_screen_mode);
-			if (Game_wind)
-				ogl_cache_level_textures();
+			if (only_ctex)
+			{
+				if (GameCfg.UseCustomTextures)
+				{
+					// Re-TICK (ON): stale plain-bitmap GL handles from the OFF
+					// state would make the loader early-exit ("already loaded")
+					// and never re-ask for the PNG -- including globals the
+					// level never touches (HUD, weapons, projectiles, explosions,
+					// powerups, robots). So invalidate ALL handles via
+					// gr_set_attributes() + gr_set_mode(), then walk EVERY
+					// bitmap so each one checks for its "<name>.png" override
+					// again (d2 has no per-level override tables to re-read).
+					// One-time hitch, correct.
+					show_boxed_message("Applying Texture Settings...", 0);
+
+					gr_set_attributes();
+					gr_set_mode(Game_screen_mode);
+
+					if (Game_wind)
+						ogl_cache_level_textures();
+				}
+				else
+				{
+					// UN-TICK (OFF): plain bitmaps are already resident, so just
+					// drop the PNG entries and let them fall back lazily. Fast.
+					show_boxed_message("Applying Texture Settings...", 0);
+
+					if (Game_wind)
+						ogl_recache_custom_textures();
+				}
+			}
+			else if (only_models)
+			{
+				// Models-only change: no bitmap or full-cache work. ASE data was
+				// already loaded/freed above; GL textures self-populate on next
+				// draw. Popup names the toggle so the player gets feedback for
+				// the (usually fast) op.
+				show_boxed_message("Applying Model Settings...", 0);
+			}
+			else
+			{
+				// Draw and FLIP the message before the blocking work starts, so it
+				// is actually visible during the pause instead of appearing after.
+				show_boxed_message("Applying Texture Settings...", 0);
+
+				gr_set_attributes();
+				gr_set_mode(Game_screen_mode);
+				if (Game_wind)
+					ogl_cache_level_textures();
+			}
 		}
 	}
 #endif
