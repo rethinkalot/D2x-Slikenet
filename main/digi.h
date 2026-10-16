@@ -54,6 +54,8 @@ extern void digi_init_sounds();
 extern void digi_sync_sounds();
 extern void digi_kill_sound_linked_to_segment( int segnum, int sidenum, int soundnum );
 extern void digi_kill_sound_linked_to_object( int objnum );
+extern void digi_kill_sound_linked_to_object_sound( int objnum, int soundnum );
+extern void digi_kill_sound_linked_to_object_signature_sound( int signature, int soundnum );
 
 extern void digi_set_digi_volume( int dvolume );
 extern void digi_set_volume( int dvolume );

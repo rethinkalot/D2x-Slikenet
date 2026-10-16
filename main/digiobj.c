@@ -542,6 +542,45 @@ void digi_kill_sound_linked_to_object( int objnum )
 	}
 }
 
+/* Stop only one sound attached to an object. Demo playback uses this for
+ * afterburner loops so duplicate starts cannot stack and a stop cannot cut
+ * off unrelated sounds attached to the same ship. */
+void digi_kill_sound_linked_to_object_sound( int objnum, int org_soundnum )
+{
+	int i;
+	int soundnum = digi_xlat_sound(org_soundnum);
+
+	for (i = 0; i < MAX_SOUND_OBJECTS; i++) {
+		if ((SoundObjects[i].flags & SOF_USED) && (SoundObjects[i].flags & SOF_LINK_TO_OBJ) &&
+		    SoundObjects[i].link_type.obj.objnum == objnum && SoundObjects[i].soundnum == soundnum) {
+			if (SoundObjects[i].channel > -1) {
+				digi_stop_sound(SoundObjects[i].channel);
+				N_active_sound_objects--;
+			}
+			SoundObjects[i].channel = -1;
+			SoundObjects[i].flags = 0;
+		}
+	}
+}
+
+void digi_kill_sound_linked_to_object_signature_sound( int signature, int org_soundnum )
+{
+	int i;
+	int soundnum = digi_xlat_sound(org_soundnum);
+
+	for (i = 0; i < MAX_SOUND_OBJECTS; i++) {
+		if ((SoundObjects[i].flags & SOF_USED) && (SoundObjects[i].flags & SOF_LINK_TO_OBJ) &&
+		    SoundObjects[i].link_type.obj.objsignature == signature && SoundObjects[i].soundnum == soundnum) {
+			if (SoundObjects[i].channel > -1) {
+				digi_stop_sound(SoundObjects[i].channel);
+				N_active_sound_objects--;
+			}
+			SoundObjects[i].channel = -1;
+			SoundObjects[i].flags = 0;
+		}
+	}
+}
+
 //	John's new function, 2/22/96.
 void digi_record_sound_objects()
 {

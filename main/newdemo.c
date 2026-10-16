@@ -141,6 +141,9 @@ extern void init_seismic_disturbances(void);
 #define ND_EVENT_SECRET_THINGY			48	// 0/1 = secret exit functional/non-functional
 #define ND_EVENT_LINK_SOUND_TO_OBJ		49	// record digi_link_sound_to_object3
 #define ND_EVENT_KILL_SOUND_TO_OBJ		50	// record digi_kill_sound_linked_to_object
+#define ND_EVENT_PLAYER_AFTERBURNER_STATE	51	// followed by old and current afterburner control states
+#define ND_EVENT_MULTI_AFTERBURNER_STOP	52	// followed by player number
+#define ND_EVENT_MULTI_AFTERBURNER_STOP_SIGNATURE	53	// followed by player number and object signature
 
 
 #define NORMAL_PLAYBACK 			0
@@ -203,6 +206,7 @@ static sbyte nd_record_v_viewobjs[MAX_OBJECTS];
 static sbyte nd_record_v_rendering[32];
 static int nd_record_v_player_energy = -1;
 static fix nd_record_v_player_afterburner = -1;
+static ubyte nd_record_v_player_afterburner_state;
 static int nd_record_v_player_shields = -1;
 static uint nd_record_v_player_flags = -1;
 static int nd_record_v_weapon_type = -1;
@@ -917,6 +921,7 @@ void newdemo_record_start_demo()
 	nd_record_v_player_shields = (sbyte)(f2ir(Players[Player_num].shields));
 	nd_write_byte((sbyte)(f2ir(Players[Player_num].shields)));
 	nd_record_v_player_afterburner = 0;
+	nd_record_v_player_afterburner_state = Controls.afterburner_state;
 	nd_record_v_player_flags = Players[Player_num].flags;
 	nd_write_int(Players[Player_num].flags);        // be sure players flags are set
 	nd_write_byte((sbyte)Players[Player_num].primary_weapon);
@@ -1210,6 +1215,27 @@ void newdemo_record_player_afterburner(fix afterburner)
 	nd_write_byte((sbyte) (nd_record_v_player_afterburner>>9));
 	nd_write_byte((sbyte) (afterburner>>9));
 	nd_record_v_player_afterburner = afterburner;
+	start_time();
+}
+
+void newdemo_record_player_afterburner_state(ubyte state)
+{
+	if (nd_record_v_player_afterburner_state == state)
+		return;
+	stop_time();
+	nd_write_byte(ND_EVENT_PLAYER_AFTERBURNER_STATE);
+	nd_write_byte(nd_record_v_player_afterburner_state);
+	nd_write_byte(state);
+	nd_record_v_player_afterburner_state = state;
+	start_time();
+}
+
+void newdemo_record_multi_afterburner_stop(ubyte pnum)
+{
+	stop_time();
+	nd_write_byte(ND_EVENT_MULTI_AFTERBURNER_STOP_SIGNATURE);
+	nd_write_byte(pnum);
+	nd_write_int(Players[pnum].objnum >= 0 && Players[pnum].objnum <= Highest_object_index ? Objects[Players[pnum].objnum].signature : -1);
 	start_time();
 }
 
@@ -1748,7 +1774,7 @@ int newdemo_read_frame_information(int rewrite)
 	object extraobj;
 	segment *seg;
 	bool shields_updated = 0, energy_updated = 0; // Flags to indicate if shields or energy has already been updated when rewinding.  Rewinds should only take the first update.
-	bool afterburner_updated = 0; // Added in D2 port of fix - looks likely to affect this too
+	bool afterburner_updated = 0, afterburner_state_updated = 0; // Rewind only the first update of each recorded value.
 
 	done = 0;
 
@@ -1958,6 +1984,8 @@ int newdemo_read_frame_information(int rewrite)
 				}
 				objnum = newdemo_find_object( signature );
 				if ( objnum > -1 && Newdemo_vcr_state == ND_STATE_PLAYBACK)  {   //  @mk, 2/22/96, John told me to.
+					if (soundno == SOUND_AFTERBURNER_IGNITE)
+						digi_kill_sound_linked_to_object_sound(objnum, SOUND_AFTERBURNER_IGNITE);
 					digi_link_sound_to_object3( soundno, objnum, 1, max_volume, max_distance, loop_start, loop_end );
 				}
 			}
@@ -2203,6 +2231,68 @@ int newdemo_read_frame_information(int rewrite)
 					Players[Player_num].afterburner_charge = old_afterburner<<9;
 					afterburner_updated = 1;
 				}
+			}
+			break;
+		}
+
+		case ND_EVENT_PLAYER_AFTERBURNER_STATE: {
+			ubyte old_state, state;
+
+			nd_read_byte((sbyte *)&old_state);
+			nd_read_byte((sbyte *)&state);
+			if (nd_playback_v_bad_read) { done = -1; break; }
+			if (rewrite) {
+				nd_write_byte(old_state);
+				nd_write_byte(state);
+				break;
+			}
+			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
+				Controls.afterburner_state = state;
+				if (!state)
+				digi_kill_sound_linked_to_object_sound(Players[Player_num].objnum, SOUND_AFTERBURNER_IGNITE);
+			} else if ((Newdemo_vcr_state == ND_STATE_REWINDING) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEBACKWARD)) {
+				if (!afterburner_state_updated) {
+					Controls.afterburner_state = old_state;
+					if (!old_state)
+						digi_kill_sound_linked_to_object(Players[Player_num].objnum);
+					afterburner_state_updated = 1;
+				}
+			}
+			break;
+		}
+
+		case ND_EVENT_MULTI_AFTERBURNER_STOP: {
+			ubyte pnum;
+
+			nd_read_byte((sbyte *)&pnum);
+			if (nd_playback_v_bad_read) { done = -1; break; }
+			if (rewrite) {
+				nd_write_byte(pnum);
+				break;
+			}
+			if (((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) && pnum < MAX_PLAYERS) {
+				digi_kill_sound_linked_to_object_sound(Players[pnum].objnum, SOUND_AFTERBURNER_IGNITE);
+			}
+			break;
+		}
+
+		case ND_EVENT_MULTI_AFTERBURNER_STOP_SIGNATURE: {
+			ubyte pnum;
+			int signature;
+
+			nd_read_byte((sbyte *)&pnum);
+			nd_read_int(&signature);
+			if (nd_playback_v_bad_read) { done = -1; break; }
+			if (rewrite) {
+				nd_write_byte(pnum);
+				nd_write_int(signature);
+				break;
+			}
+			if ((Newdemo_vcr_state == ND_STATE_PLAYBACK) || (Newdemo_vcr_state == ND_STATE_FASTFORWARD) || (Newdemo_vcr_state == ND_STATE_ONEFRAMEFORWARD)) {
+				if (signature >= 0)
+					digi_kill_sound_linked_to_object_signature_sound(signature, SOUND_AFTERBURNER_IGNITE);
+				else if (pnum < MAX_PLAYERS)
+					digi_kill_sound_linked_to_object_sound(Players[pnum].objnum, SOUND_AFTERBURNER_IGNITE);
 			}
 			break;
 		}
