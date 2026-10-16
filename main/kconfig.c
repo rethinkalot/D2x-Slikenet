@@ -52,6 +52,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "cntrlcen.h"
 #include "collide.h"
 #include "playsave.h"
+#include "newdemo.h"
 
 #ifdef OGL
 #include "ogl_init.h"
@@ -1970,6 +1971,12 @@ void kconfig_read_controls(d_event *event, int automap_flag)
         }
         Controls.forward_thrust_time = -speed_factor * FrameTime;
     }
+
+	/* Record button transitions on the input event itself. A press and release
+	 * can both occur between simulation frames, so sampling only in game.c can
+	 * miss the release and leave demo playback's loop sound running. */
+	if (Newdemo_state == ND_STATE_RECORDING)
+		newdemo_record_player_afterburner_state(Controls.afterburner_state);
 }
 
 void reset_cruise(void)

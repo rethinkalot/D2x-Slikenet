@@ -5738,9 +5738,11 @@ void multi_do_sound_function (const ubyte *buf)
 	whichfunc=buf[2];
 	sound=buf[3];
 
-	if (whichfunc==0)
+	if (whichfunc==0) {
+		if (Newdemo_state == ND_STATE_RECORDING && pnum >= 0 && pnum < MAX_PLAYERS)
+			newdemo_record_multi_afterburner_stop((ubyte)pnum);
 		digi_kill_sound_linked_to_object (Players[(int)pnum].objnum);
-	else if (whichfunc==3)
+	} else if (whichfunc==3)
 		digi_link_sound_to_object3( sound, Players[(int)pnum].objnum, 1,F1_0, i2f(256), AFTERBURNER_LOOP_START, AFTERBURNER_LOOP_END);
 }
 

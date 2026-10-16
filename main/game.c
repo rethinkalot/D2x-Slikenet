@@ -770,6 +770,8 @@ void do_afterburner_stuff(void)
 
 	if (!(Players[Player_num].flags & PLAYER_FLAGS_AFTERBURNER))
 		Players[Player_num].afterburner_charge = 0;
+	if (Newdemo_state == ND_STATE_RECORDING)
+		newdemo_record_player_afterburner_state(Controls.afterburner_state);
 
 	if (Endlevel_sequence || Player_is_dead)
 	{
