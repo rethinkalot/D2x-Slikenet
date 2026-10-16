@@ -2241,7 +2241,7 @@ struct misc_menu_data {
 
 void do_misc_menu()
 {
-	newmenu_item m[44];
+	newmenu_item m[46];
 	int i = 0;
 	struct misc_menu_data misc_menu_data;
 
@@ -2301,7 +2301,7 @@ void do_misc_menu()
 		m[19].text = "";
 
 		ADD_CHECK(20, "Movie Subtitles",GameCfg.MovieSubtitles);
-		ADD_CHECK(21, "No redundant pickup messages",PlayerCfg.NoRedundancy);
+		ADD_CHECK(21, "Suppress HUD Messages (SP)",PlayerCfg.NoRedundancy);
 		ADD_CHECK(22, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
 		ADD_CHECK(23, "No Rankings (Multi)",PlayerCfg.NoRankings);
 		ADD_CHECK(24, "Show D2-style Prox. Bomb Gauge",PlayerCfg.BombGauge);
@@ -2371,6 +2371,11 @@ void do_misc_menu()
 		}
 		m[43].value = PlayerCfg.PreferMyTeamColors;
 
+		m[44].type = NM_TYPE_TEXT;
+		m[44].text = "";
+
+		ADD_CHECK(45, "Original D1 Weapons (SP)", PlayerCfg.OriginalD1Weapons);
+
 		i = newmenu_do1(NULL, "Misc Options", SDL_arraysize(m), m, menu_misc_options_handler, &misc_menu_data, i);
 
 		PlayerCfg.AutoLeveling			= m[0].value;
@@ -2410,6 +2415,7 @@ void do_misc_menu()
 		PlayerCfg.NoChatSound = m[33].value;
 		PlayerCfg.ShowCustomColors = m[38].value;
 		PlayerCfg.PreferMyTeamColors = (PlayerCfg.MyTeamColor == 8 && PlayerCfg.OtherTeamColor == 8) ? 0 : m[43].value;
+		PlayerCfg.OriginalD1Weapons = m[45].value;
 
 	} while( i>-1 );
 

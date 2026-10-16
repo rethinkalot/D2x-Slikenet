@@ -1858,7 +1858,13 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 		int size = bm->bm_w * bm->bm_h;
 
 		if (bm->gltexture_mask == NULL)
-			ogl_init_texture(bm->gltexture_mask = ogl_get_free_texture(), bm->bm_w, bm->bm_h, OGL_FLAG_ALPHA);
+			bm->gltexture_mask = ogl_get_free_texture();
+		if (bm->gltexture_mask->handle > 0 &&
+		    (bm->gltexture_mask->w != bm->bm_w || bm->gltexture_mask->h != bm->bm_h || bm->gltexture_mask->is_png))
+			ogl_freetexture(bm->gltexture_mask);
+		if (bm->gltexture_mask->handle <= 0 || bm->gltexture_mask->w != bm->bm_w ||
+		    bm->gltexture_mask->h != bm->bm_h || bm->gltexture_mask->is_png)
+			ogl_init_texture(bm->gltexture_mask, bm->bm_w, bm->bm_h, OGL_FLAG_ALPHA);
 
 		MALLOC(mask, unsigned char, size);
 		for (int i = 0; i < size; i++)
