@@ -334,211 +334,238 @@ void init_ammo_and_energy(void)
 
 extern	ubyte	Last_afterburner_state;
 
-// Speedrun timers: IGT (whole session) and RTA (total time spent flying).
-//
-// Deliberately a SEPARATE pair of clocks, advanced by speedrun_tick() from
-// game.c. Both are CUMULATIVE for the entire run -- neither resets when a new
-// level spawns. They differ in what they include:
-//
-//   IGT - the whole session from the first spawn after the
-//         prepare-for-descent screen until quitting to the main menu,
-//         INCLUDING time spent paused, behind a menu, or watching a cutscene.
-//
-//   RTA - only time actually spent flying, accumulated across every level
-//         of the run, so pause, menus and cutscenes never pollute it.
-//
-// The gap between the two lines is therefore exactly the non-gameplay time,
-// which is what makes them useful as a pair. Both accumulate in whole
-// milliseconds, so the framerate cap cannot skew them and the hundredths
-// are exact.
+// Speedrun timers, advanced from game.c. RTA accumulates during gameplay and
+// between-level transitions. IGT accumulates only during active gameplay, so
+// it pauses during menus, cutscenes, loading and other non-gameplay time. RTA
+// also keeps running in the background during a pause. Both clocks are cumulative
+// across levels and share one wall-clock source with independent
+// gates. Variable names match the current displayed labels.
 //
 // Displayed green while the run is "clean". White means the run was interrupted
 // by a save/load, i.e. a null attempt -- the times shown are still correct, but
 // the run no longer counts as uninterrupted.
 //
-// Speedrun_igt and Speedrun_rta are therefore in MILLISECONDS.
-fix64 Speedrun_igt = 0;			// total session time, in ms
-fix64 Speedrun_rta = 0;			// total time spent flying, all levels, in ms
-int Speedrun_igt_running = 0;
+// Both clock values are in milliseconds.
+fix64 Speedrun_rta = 0;			// RTA: real time from first spawn through exits and transitions
+fix64 Speedrun_igt = 0;			// IGT: active gameplay only
 int Speedrun_rta_running = 0;
+int Speedrun_igt_running = 0;
 int Speedrun_continued = 0;		// set when a saved game was loaded
 int Speedrun_gameplay = 0;		// true only while actually flying
+static int Speedrun_transitioning = 0;
+static int Speedrun_has_started = 0;
+static int Speedrun_pause_menu = 0;
+static fix64 speedrun_last_perf = 0;
 
-// Previous timer_query_perf() reading, used as the baseline for the IGT delta.
-// Zero means "not currently timing", which is how a freshly-armed or stopped
-// IGT avoids banking the gap since program start / since it was stopped.
-static fix64 igt_last_perf = 0;
+// Shared timer_query_perf() baseline. It advances on every sample so excluded
+// time cannot leak into the next gameplay or transition delta.
 
-// Called once per drawn frame to advance whichever timers are live.
-//
-// Gameplay is auto-detected each frame: the clocks only run while the player
-// is actually flying. Endlevel_sequence covers the exit/cutscene sequence and
-// the prepare-for-descent briefing, so RTA pauses there automatically and
-// resumes on the next spawn -- no explicit hook needed at each site.
-//
-// IGT and RTA are driven from the SAME wall-clock reading, so during actual
-// gameplay they advance at an identical rate and the two lines can be compared
-// directly. They differ only in WHEN they accumulate:
-//
-//   IGT is live whenever the run is live -- through exits, cutscenes, the
-//   prepare-for-descent briefing, menus and PAUSE. Pausing does not stop an
-//   in-game timer.
-//
-//   RTA only accumulates while the player is actually flying. It therefore
-//   excludes pause, menus, cutscenes and loading for free, simply because
-//   speedrun_set_gameplay() clears its running flag outside gameplay.
-//
-// Both read timer_query_perf() -- a true wall clock that keeps advancing even
-// while the simulation is frozen. FrameTime is tied to the simulation and is not
-// stepped at all while paused, which is what made an earlier revision freeze IGT
-// along with RTA on the pause key.
-void speedrun_tick(void)
+// Gameplay is detected from the visible game window and unpaused simulation.
+// That advances both clocks. While a between-level transition is active, only
+// RTA advances for the active run. IGT advances only during active gameplay.
+static void speedrun_advance_clocks(int advance_rta, int advance_igt)
 {
-	// The window must be the visible front window (not hidden behind a menu),
-	// we must not be in an endlevel/cutscene/prepare-for-descent sequence, and
-	// the simulation must not be paused.
-	speedrun_set_gameplay(Game_wind != NULL && window_is_visible(Game_wind)
-		&& !Endlevel_sequence && !game_time_is_paused());
-
 	// One clock reading, shared by both timers, so their rates cannot drift
 	// apart from rounding or from being sampled at slightly different moments.
 	fix64 now = timer_query_perf();
 
-	if (igt_last_perf)
+	if (speedrun_last_perf)
 	{
-		fix64 delta = now - igt_last_perf;	// fix (1/65536 s)
+		fix64 delta = now - speedrun_last_perf;	// fix (1/65536 s)
 
 		// Guard against a bogus/negative delta (clock reset, debugger break).
 		if (delta > 0)
 		{
 			fix64 delta_ms = (delta * 1000) / F1_0;
 
-			if (Speedrun_igt_running)
-				Speedrun_igt += delta_ms;
-
-			if (Speedrun_rta_running)
+			if (advance_rta && Speedrun_rta_running)
 				Speedrun_rta += delta_ms;
+
+			if (advance_igt && Speedrun_igt_running)
+				Speedrun_igt += delta_ms;
 		}
 	}
 
 	// The baseline tracks wall time unconditionally, NOT the running flags.
 	// If it were reset whenever IGT was stopped, the time spent paused would be
 	// silently dropped from the next delta -- the very gap IGT exists to count.
-	igt_last_perf = now;
+	speedrun_last_perf = now;
+}
+
+// Advance RTA while drawing between-level transition screens. IGT remains paused.
+void speedrun_transition_tick(void)
+{
+	if (Speedrun_transitioning)
+		speedrun_set_gameplay(0);
+	// This is also called by the pause overlay and boxed transition messages.
+	// RTA keeps advancing after spawn even when the game window is covered.
+	speedrun_advance_clocks(Speedrun_rta_running, 0);
+}
+
+void speedrun_tick(void)
+{
+	int gameplay;
+	int advance_rta;
+	int advance_igt;
+
+	// The window must be the visible front window (not hidden behind a menu),
+	// we must not be in an endlevel/cutscene/prepare-for-descent sequence, and
+	// the simulation must not be paused.
+	gameplay = Game_wind != NULL && window_is_visible(Game_wind)
+		&& !Endlevel_sequence && !game_time_is_paused();
+	advance_igt = gameplay;
+	speedrun_set_gameplay(gameplay);
+	advance_rta = Speedrun_rta_running;
+
+	speedrun_advance_clocks(advance_rta, advance_igt);
+	if (gameplay)
+	{
+		Speedrun_has_started = 1;
+		Speedrun_transitioning = 0;
+	}
 }
 
 // Full restart: brand new game from the menus.
 void speedrun_new_game(void)
 {
-	Speedrun_igt = 0;
 	Speedrun_rta = 0;
-	Speedrun_igt_running = 1;
+	Speedrun_igt = 0;
 	Speedrun_rta_running = 1;
+	Speedrun_igt_running = 0;
+	Speedrun_gameplay = 0;
+	Speedrun_transitioning = 0;
+	Speedrun_has_started = 0;
+	Speedrun_pause_menu = 0;
 	Speedrun_continued = 0;
-	igt_last_perf = 0;		// restart the wall-clock baseline from this instant
+	speedrun_last_perf = 0;		// restart the wall-clock baseline from this instant
 }
 
-// A level was entered or the player respawned.
-//
-// RTA resumes here; it is frozen again by speedrun_level_finished() on exit.
-// Nothing else is touched, because both clocks are cumulative for the whole run.
+// Level entry never resets either cumulative clock. RTA includes marked
+// transitions; IGT resumes when the next level becomes playable.
 void speedrun_level_start(void)
 {
-	Speedrun_igt_running = 1;
+	Speedrun_rta_running = Speedrun_transitioning;
+	Speedrun_igt_running = 0;
+	Speedrun_gameplay = 0;
+}
+
+// A new level is being entered after the run has already started. Count the
+// full transition, including its briefing/movie and synchronous load period.
+void speedrun_transition_start(void)
+{
+	if (!Speedrun_has_started)
+		return;
+
+	Speedrun_transitioning = 1;
+	Speedrun_gameplay = 0;
+	Speedrun_igt_running = 0;
 	Speedrun_rta_running = 1;
 }
 
-// Gates RTA on actually being in gameplay. IGT is unaffected by this: it keeps
-// running through exits, cutscenes, the prepare-for-descent briefing and
-// any menu the player opens mid-game. Only RTA counts time actually spent
-// flying, so it freezes outside gameplay.
+void speedrun_transition_stop(void)
+{
+	// Include any transition time since the last frame/sample before stopping.
+	if (Speedrun_transitioning)
+		speedrun_advance_clocks(1, 0);
+	Speedrun_rta_running = 0;
+	Speedrun_transitioning = 0;
+	Speedrun_gameplay = 0;
+	Speedrun_igt_running = 0;
+	Speedrun_has_started = 0;
+	Speedrun_pause_menu = 0;
+}
+
+void speedrun_pause_menu_set(int visible)
+{
+	Speedrun_pause_menu = visible;
+}
+
+int speedrun_pause_menu_is_visible(void)
+{
+	return Speedrun_pause_menu;
+}
+
+// IGT follows active gameplay; RTA follows gameplay plus a marked transition.
 void speedrun_set_gameplay(int active)
 {
-	if (active == Speedrun_gameplay)
-		return;
-
 	Speedrun_gameplay = active;
-	Speedrun_rta_running = active;
+	Speedrun_igt_running = active;
+	if (active)
+	{
+		Speedrun_has_started = 1;
+		Speedrun_transitioning = 0;
+		Speedrun_igt_running = 1;
+	}
+	Speedrun_rta_running = Speedrun_has_started || active || Speedrun_transitioning;
 }
 
-// The level was exited -- freeze RTA so the finishing time stays visible.
+// A level exit starts a between-level transition. Final-game handling stops
+// it explicitly once the run is complete.
 void speedrun_level_finished(void)
 {
-	Speedrun_rta_running = 0;
+	Speedrun_gameplay = 0;
+	Speedrun_transitioning = Speedrun_has_started;
+	Speedrun_igt_running = 0;
+	Speedrun_rta_running = Speedrun_transitioning;
 }
 
-// Player quit back to the main menu -- the session is over, so BOTH clocks are
-// stopped AND cleared.
-//
-// This is the only place (besides starting a brand new game) where the IGT is
-// zeroed. It deliberately survives every save/load within a session: the IGT is
-// the whole-session wall clock, so wiping it on load would hand an attacker the
-// gap needed to re-synchronise it against the restored RTA by idling in a menu.
+// Quitting to the main menu clears both accumulated clocks and run state.
 void speedrun_quit_to_menu(void)
 {
-	Speedrun_igt_running = 0;
 	Speedrun_rta_running = 0;
-	Speedrun_igt = 0;
+	Speedrun_igt_running = 0;
 	Speedrun_rta = 0;
+	Speedrun_igt = 0;
 	Speedrun_continued = 0;
-	igt_last_perf = 0;
+	speedrun_last_perf = 0;
+	Speedrun_gameplay = 0;
+	Speedrun_transitioning = 0;
+	Speedrun_has_started = 0;
+	Speedrun_pause_menu = 0;
 }
 
-// A saved game was loaded.
-//
-// NEITHER clock is zeroed here. Both are restored from the save, because
-// resetting only one of them would be exploitable: if the RTA resumed at its
-// saved 60.00 while the IGT restarted from 0, the IGT would keep counting
-// through the menus (it is not gameplay-gated) and could simply be allowed to
-// climb until the two numbers met again, disguising an interrupted run as a
-// clean one. Restoring both from the same instant keeps the pair self-consistent
-// -- their gap stays exactly the non-gameplay time -- and the white marker below
-// still declares the run a null attempt.
-//
-// The IGT is therefore zeroed only by speedrun_new_game() and by
-// speedrun_quit_to_menu(); it survives every save/load within a session.
-//
-// Both lines are then drawn WHITE, which is the "null attempt" marker: the
-// timing shown is real and correct, but the run is disqualified because it was
-// interrupted.
+// Saved values are restored after initialization, and the continued marker
+// identifies the run as interrupted.
 void speedrun_game_loaded(void)
 {
 	// Clear both up front. If the save carries stored values the state loader
 	// restores them immediately afterwards and overwrites these; if the save
 	// predates persistence there is nothing to restore, so both correctly start
 	// from zero rather than leaking in whatever was on screen before the load.
-	Speedrun_igt = 0;
 	Speedrun_rta = 0;
-	Speedrun_igt_running = 1;
+	Speedrun_igt = 0;
 	Speedrun_rta_running = 1;
+	Speedrun_igt_running = 0;
+	Speedrun_gameplay = 0;
+	Speedrun_transitioning = 0;
+	Speedrun_has_started = 1;
 	Speedrun_continued = 1;
-	igt_last_perf = 0;		// restart the wall-clock baseline from this instant
-}
-
-// Restore the RTA value carried in a save file.
-//
-// Negative values are rejected: they cannot arise from a legitimate save and
-// would run the display backwards.
-void speedrun_rta_restored(fix64 ms)
-{
-	if (ms < 0)
-		return;
-
-	Speedrun_rta = ms;
+	speedrun_last_perf = 0;		// restart the wall-clock baseline from this instant
 }
 
 // Restore the IGT value carried in a save file.
 //
-// Kept separate from speedrun_rta_restored() so the version-tagged loader in
-// state.c can apply the two independently: a version-1 save restores the RTA
-// only and deliberately leaves the IGT at 0, because it has no stored IGT to
-// restore and inventing one would be worse than admitting it is unknown.
+// Negative values are rejected: they cannot arise from a legitimate save and
+// would run the display backwards.
 void speedrun_igt_restored(fix64 ms)
 {
 	if (ms < 0)
 		return;
 
 	Speedrun_igt = ms;
+}
+
+// Restore the RTA value carried in a save file.
+//
+// Kept separate from speedrun_igt_restored() so the version-tagged loader in
+// state.c can apply the two independently. Legacy saves map their old RTA-only
+// value to current IGT because the timer labels were swapped after those saves.
+void speedrun_rta_restored(fix64 ms)
+{
+	if (ms < 0)
+		return;
+
+	Speedrun_rta = ms;
 }
 
 // Setup player for new level (After completion of previous level)
@@ -1257,6 +1284,7 @@ void do_screen_message(char *fmt, ...)
 //	robots, powerups, walls, doors, etc.
 void StartNewLevelSecret(int level_num, int page_in_textures)
 {
+	speedrun_transition_start();
         ThisLevelTime=0;
 
 	last_drawn_cockpit = -1;
@@ -1464,7 +1492,7 @@ void EnterSecretLevel(void)
 void PlayerFinishedLevel(int secret_flag)
 {
 	Assert(!secret_flag);
-	// Level exit: freeze the RTA so the finishing time stays on screen.
+	// Count RTA through the full transition, until the next level starts.
 	speedrun_level_finished();
 
 
@@ -1506,6 +1534,8 @@ void show_order_form();
 //called when the player has finished the last level
 void DoEndGame(void)
 {
+	speedrun_transition_stop();
+
 	if ((Newdemo_state == ND_STATE_RECORDING) || (Newdemo_state == ND_STATE_PAUSED))
 		newdemo_stop_recording(0);
 
@@ -2011,6 +2041,7 @@ void maybe_set_first_secret_visit(int level_num)
 //	secret_flag if came from a secret level
 void StartNewLevel(int level_num)
 {
+	speedrun_transition_start();
 	hide_menus();
 
 	GameTime64 = 0;

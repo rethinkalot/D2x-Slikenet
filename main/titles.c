@@ -44,6 +44,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "songs.h"
 #include "newmenu.h"
 #include "state.h"
+#include "gameseq.h"
 #include "movie.h"
 #include "menu.h"
 #include "mouse.h"
@@ -54,6 +55,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #endif
 
 extern unsigned RobSX,RobSY,RobDX,RobDY; // Robot movie coords
+extern void show_speedrun_timers(void);
 
 struct briefing;
 void set_briefing_fontcolor (struct briefing *br);
@@ -1364,6 +1366,9 @@ int briefing_handler(window *wind, d_event *event, briefing *br)
 				flash_cursor(br, br->flashing_cursor);
 			else if (br->flashing_cursor)
 				gr_printf(br->text_x, br->text_y, "_");
+
+			speedrun_transition_tick();
+			show_speedrun_timers();
 			break;
 
 		case EVENT_WINDOW_CLOSE:

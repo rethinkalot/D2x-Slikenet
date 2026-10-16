@@ -29,6 +29,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include <ctype.h>
 
 #include "movie.h"
+#include "gameseq.h"
 #include "window.h"
 #include "console.h"
 #include "config.h"
@@ -47,6 +48,8 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "menu.h"
 #include "libmve.h"
 #include "text.h"
+
+extern void show_speedrun_timers(void);
 #include "screens.h"
 #include "physfsrwops.h"
 #ifdef OGL
@@ -321,6 +324,11 @@ int MovieHandler(window *wind, d_event *event, movie *m)
 			break;
 
 		case EVENT_WINDOW_DRAW:
+			// Movie playback has its own event loop, so the normal game-window
+			// callback cannot advance or draw the speedrun clocks here. Keep IGT
+			// live and draw its HUD readout over each movie frame when enabled.
+			speedrun_transition_tick();
+
 			if (!m->paused)
 			{
 				m->result = MVE_rmStepMovie();
@@ -332,6 +340,7 @@ int MovieHandler(window *wind, d_event *event, movie *m)
 			}
 
 			draw_subtitles(m->frame_num);
+			show_speedrun_timers();
 
 			gr_palette_load(gr_palette);
 

@@ -117,8 +117,9 @@ uint state_game_id;
 // instead of blindly reinterpreted.
 //
 //   0 - no speedrun data at all (saves from before the feature).
-//   1 - RTA only (an intermediate build; loading one leaves the IGT at 0).
-//   2 - RTA and IGT, both restored so the pair stays self-consistent.
+//   1 - legacy RTA only (restored as current IGT).
+//   2 - legacy RTA/IGT slots; their meanings are reversed from the current HUD
+//       labels, so the loader maps each slot to the matching current timer.
 #define SPEEDRUN_SAVE_VERSION 2
 
 // Following functions convert object to object_rw and back to be written to/read from Savegames. Mostly object differs to object_rw in terms of timer values (fix/fix64). as we reset GameTime64 for writing so it can fit into fix it's not necessary to increment savegame version. But if we once store something else into object which might be useful after restoring, it might be handy to increment Savegame version and actually store these new infos.
@@ -1133,6 +1134,18 @@ int state_save_all_sub(char *filename, char *desc)
 		PHYSFS_write(fp, &Netgame.level_time, sizeof(int), 1);
 	}
 
+	// Append both speedrun clocks so every existing save field keeps its offset.
+	// Match D1's version-2 slot order for compatibility with the timer label swap.
+	{
+		PHYSFS_sint32 ver = SPEEDRUN_SAVE_VERSION;
+		PHYSFS_sint64 legacy_rta_slot_ms = (PHYSFS_sint64)Speedrun_igt;
+		PHYSFS_sint64 legacy_igt_slot_ms = (PHYSFS_sint64)Speedrun_rta;
+
+		PHYSFS_write(fp, &ver, sizeof(PHYSFS_sint32), 1);
+		PHYSFS_write(fp, &legacy_rta_slot_ms, sizeof(PHYSFS_sint64), 1);
+		PHYSFS_write(fp, &legacy_igt_slot_ms, sizeof(PHYSFS_sint64), 1);
+	}
+
 	PHYSFS_close(fp);
 	
 	start_time();
@@ -1738,6 +1751,36 @@ int state_restore_all_sub(char *filename, int secret_restore)
 				multi_disconnect_player(i);
 		Viewer = ConsoleObject = &Objects[Players[Player_num].objnum]; // make sure Viewer and ConsoleObject are set up (which we skipped by not using InitPlayerObject but we need since objects changed while loading)
 		special_reset_objects(); // since we juggeled around with objects to remap coop players rebuild the index of free objects
+	}
+
+	// Loading restores both clocks from the save and marks the run as continued
+	// so the HUD uses the white interrupted-run color.
+	speedrun_game_loaded();
+	{
+		PHYSFS_sint64 remaining = (PHYSFS_sint64)PHYSFS_fileLength(fp) - (PHYSFS_sint64)PHYSFS_tell(fp);
+
+		if (remaining >= (PHYSFS_sint64)(sizeof(PHYSFS_sint32) + sizeof(PHYSFS_sint64) * 2))
+		{
+			PHYSFS_sint32 ver = 0;
+			PHYSFS_sint64 legacy_rta_slot_ms = 0, legacy_igt_slot_ms = 0;
+
+			if (PHYSFS_read(fp, &ver, sizeof(PHYSFS_sint32), 1) == 1 &&
+				PHYSFS_read(fp, &legacy_rta_slot_ms, sizeof(PHYSFS_sint64), 1) == 1 &&
+				PHYSFS_read(fp, &legacy_igt_slot_ms, sizeof(PHYSFS_sint64), 1) == 1 &&
+				ver >= SPEEDRUN_SAVE_VERSION)
+			{
+				speedrun_igt_restored((fix64)legacy_rta_slot_ms);
+				speedrun_rta_restored((fix64)legacy_igt_slot_ms);
+			}
+		}
+		else if (remaining >= (PHYSFS_sint64)sizeof(PHYSFS_sint64))
+		{
+			// Legacy save with only one timer slot: restore the former RTA as IGT.
+			PHYSFS_sint64 legacy_rta_slot_ms = 0;
+
+			if (PHYSFS_read(fp, &legacy_rta_slot_ms, sizeof(PHYSFS_sint64), 1) == 1)
+				speedrun_igt_restored((fix64)legacy_rta_slot_ms);
+		}
 	}
 
 	if (PHYSFS_tell(fp) != PHYSFS_fileLength(fp))
