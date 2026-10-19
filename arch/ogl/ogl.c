@@ -1680,10 +1680,12 @@ void ogl_loadpngmask(const png_data *pdata, grs_bitmap *bm, int texfilt)
 }
 #endif
 
-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
+void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, const char *bitmapname)
 {
 	unsigned char *buf;
-	const char *bitmapname = piggy_game_bitmap_name(bm);
+
+	if (!bitmapname)
+		bitmapname = piggy_game_bitmap_name(bm);
 
 	while (bm->bm_parent)
 		bm=bm->bm_parent;
@@ -1877,7 +1879,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
 
 void ogl_loadbmtexture(grs_bitmap *bm)
 {
-	ogl_loadbmtexture_f(bm, GameCfg.TexFilt);
+	ogl_loadbmtexture_f(bm, GameCfg.TexFilt, NULL);
 }
 
 void ogl_freetexture(ogl_texture *gltexture)
