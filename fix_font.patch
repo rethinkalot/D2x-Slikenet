@@ -1,0 +1,68 @@
+diff --git a/2d/font.c b/2d/font.c
+index 6ecec1c..5f62f04 100644
+--- a/2d/font.c
++++ b/2d/font.c
+@@ -684,7 +684,7 @@ void ogl_init_font(grs_font * font)
+ 		gr_init_sub_bitmap(&font->ft_bitmaps[i],&font->ft_parent_bitmap,curx,cury,w,h);
+ 		curx+=w+gap;
+ 	}
+-	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt);
++	ogl_loadbmtexture_f(&font->ft_parent_bitmap, GameCfg.TexFilt, NULL);
+ }
+ 
+ int ogl_internal_string(int x, int y, const char *s )
+diff --git a/arch/ogl/ogl.c b/arch/ogl/ogl.c
+index 231a90a..b4894a9 100644
+--- a/arch/ogl/ogl.c
++++ b/arch/ogl/ogl.c
+@@ -1680,10 +1680,12 @@ void ogl_loadpngmask(const png_data *pdata, grs_bitmap *bm, int texfilt)
+ }
+ #endif
+ 
+-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
++void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, const char *bitmapname)
+ {
+ 	unsigned char *buf;
+-	const char *bitmapname = piggy_game_bitmap_name(bm);
++
++	if (!bitmapname)
++		bitmapname = piggy_game_bitmap_name(bm);
+ 
+ 	while (bm->bm_parent)
+ 		bm=bm->bm_parent;
+@@ -1877,7 +1879,7 @@ void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt)
+ 
+ void ogl_loadbmtexture(grs_bitmap *bm)
+ {
+-	ogl_loadbmtexture_f(bm, GameCfg.TexFilt);
++	ogl_loadbmtexture_f(bm, GameCfg.TexFilt, NULL);
+ }
+ 
+ void ogl_freetexture(ogl_texture *gltexture)
+diff --git a/include/ogl_init.h b/include/ogl_init.h
+index 317ac1e..771c007 100644
+--- a/include/ogl_init.h
++++ b/include/ogl_init.h
+@@ -86,7 +86,7 @@ int ogl_init_window(int x, int y);//create a window/switch modes/etc
+ #define OGL_FLAG_MIPMAP (1 << 0)
+ #define OGL_FLAG_NOCOLOR (1 << 1)
+ #define OGL_FLAG_ALPHA (1 << 31) // not required for ogl_loadbmtexture, since it uses the BM_FLAG_TRANSPARENT, but is needed for ogl_init_texture.
+-void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt);
++void ogl_loadbmtexture_f(grs_bitmap *bm, int texfilt, const char *bitmapname);
+ void ogl_freebmtexture(grs_bitmap *bm);
+ 
+ void ogl_start_frame(void);
+diff --git a/main/newmenu.c b/main/newmenu.c
+index a9a9759..b664f4e 100644
+--- a/main/newmenu.c
++++ b/main/newmenu.c
+@@ -163,6 +163,9 @@ void nm_draw_background(int x1, int y1, int x2, int y2 )
+ 		Assert(pcx_error == PCX_ERROR_NONE);
+ 		(void)pcx_error;
+ 		gr_remap_bitmap_good( &nm_background, background_palette, -1, -1 );
++#ifdef OGL
++		ogl_loadbmtexture_f(&nm_background, GameCfg.TexFilt, "scores");
++#endif
+ 		BGScaleX=((float)SWIDTH/nm_background.bm_w);
+ 		BGScaleY=((float)SHEIGHT/nm_background.bm_h);
+ 		init_sub=1;
