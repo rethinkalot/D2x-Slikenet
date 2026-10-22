@@ -202,6 +202,7 @@ static struct _sockaddr net_udp_ham_kick_addr[MAX_PLAYERS];
 static int net_udp_ham_kick_token[MAX_PLAYERS];
 
 /* Per-peer rolling histories: fixed memory, no packet-time allocation or I/O. */
+int Config_Client_History_Slider = 60;
 static net_udp_telemetry_position_sample net_udp_position_history[MAX_PLAYERS][NET_TELEMETRY_POSITION_CAPACITY];
 static unsigned int net_udp_position_history_head[MAX_PLAYERS];
 static unsigned int net_udp_position_history_count[MAX_PLAYERS];
@@ -247,9 +248,16 @@ static void net_udp_telemetry_record_position(int player_num, ubyte sequence, ub
 	sample->connected = connected;
 	sample->transmitted = transmitted != 0;
 
-	net_udp_position_history_head[player_num] = (slot + 1) % NET_TELEMETRY_POSITION_CAPACITY;
-	if (net_udp_position_history_count[player_num] < NET_TELEMETRY_POSITION_CAPACITY)
-		net_udp_position_history_count[player_num]++;
+     net_udp_position_history_head[player_num] = (slot + 1) % NET_TELEMETRY_POSITION_CAPACITY;
+     {
+         int max_allowed = Config_Client_History_Slider;
+         if (max_allowed > NET_TELEMETRY_POSITION_CAPACITY) max_allowed = NET_TELEMETRY_POSITION_CAPACITY;
+         if (max_allowed < 5) max_allowed = 5;
+         if ((int)net_udp_position_history_count[player_num] < max_allowed)
+                 net_udp_position_history_count[player_num]++;
+         else if ((int)net_udp_position_history_count[player_num] > max_allowed)
+                 net_udp_position_history_count[player_num] = max_allowed;
+     }
 	net_udp_position_history_total[player_num]++;
 }
 
