@@ -13,5 +13,6 @@
     "cmake.generator": "Ninja",
     "cmake.configureSettings": {
         "CMAKE_MAKE_PROGRAM": "C:/Programs/msys64/mingw64/bin/ninja.exe"
-    }
+    },
+    "zenMode.centerLayout": false
 }

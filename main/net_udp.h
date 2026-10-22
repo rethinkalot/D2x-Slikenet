@@ -10,7 +10,8 @@
 #include "fix.h"
 #include "vecmat.h"
 
-#define NET_TELEMETRY_POSITION_CAPACITY 8192
+#define NET_TELEMETRY_POSITION_CAPACITY 600
+#define NET_TELEMETRY_BOT_CAPACITY      1024
 #define NET_TELEMETRY_FIRE_CAPACITY 512
 
 typedef struct net_udp_telemetry_position_sample
