@@ -465,7 +465,7 @@ void draw_polygon_object(object *obj)
 
 
 	imsave = Interpolation_method;
-	if (Linear_tmap_polygon_objects)
+	if (Linear_tmap_polygon_objects || (obj->type == OBJ_ROBOT))
 		Interpolation_method = 1;
 
 	//set engine glow value

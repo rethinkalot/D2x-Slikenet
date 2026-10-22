@@ -3899,14 +3899,14 @@ void net_udp_do_frame(int force, int listen)
 	if (WaitForRefuseAnswer && time>(RefuseTimeLimit+(F1_0*12)))
 		WaitForRefuseAnswer=0;
 
-	// Send positional update either in the regular PPS interval OR if forced AND at least every 66.6ms (nice for firing)
-	if ((force && time >= (last_pdata_time+(F1_0/15))) || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
+	 // Send positional update either in the regular PPS interval OR if forced AND at least every 66.6ms (nice for firing)
+	if ((force && time >= (last_pdata_time+(F1_0/(Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90)))) || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
 	{
 		last_pdata_time = time;
 		net_udp_send_pdata();
 	}
 	
-	if (force || (time >= (last_mdata_time+(F1_0/10))))
+	if (force || (time >= (last_mdata_time+(F1_0/60))))
 	{
 		last_mdata_time = time;
 		multi_send_robot_frame(0);
@@ -3934,9 +3934,9 @@ void net_udp_do_frame(int force, int listen)
 		net_udp_broadcast_game_info(UPID_GAME_INFO_LITE);
 	}
 
-#ifdef USE_TRACKER
+ #ifdef USE_TRACKER
 	// If we use the tracker, tell the tracker about us every 10 seconds
-	if( Netgame.Tracker )
+	 if( Netgame.Tracker )
 	{
 		// Static variable... the last time we sent to the tracker
 		static fix64 iLastQuery = 0;
@@ -3969,7 +3969,7 @@ void net_udp_do_frame(int force, int listen)
 			nm_messagebox( TXT_WARNING, 1, TXT_OK, "No response from tracker!\nPossible causes:\nTracker is down\nYour port is likely not open!\n\nTracker: %s\nGame port: %s", GameArg.MplTrackerAddr, UDP_MyPort );
 		}
 	}
-#endif
+ #endif
 
 	
 

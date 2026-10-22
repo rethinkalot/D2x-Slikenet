@@ -2416,7 +2416,17 @@ multi_interp_update_remote(void)
 	if (Endlevel_sequence || Newdemo_state != ND_STATE_NORMAL)
 		return;
 
-	pps = Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 20;
+      // Slikenet Rule: 90 PPS max for PvP, capped at 60 PPS for COOP modes
+      if (Game_mode & GM_MULTI_COOP) {
+          pps = 60;
+      } else {
+      // Slikenet Rule: 90 PPS max for PvP, capped at 60 PPS for COOP modes
+      if (Game_mode & GM_MULTI_COOP) {
+          pps = 60;
+      } else {
+          pps = Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90;
+      }
+      }
 	cadence = ((fix64)F1_0 + pps / 2) / pps;
 	delay = cadence * 3 / 2;
 	if (delay < MULTI_INTERP_MIN_DELAY)
@@ -2491,8 +2501,7 @@ multi_interp_update_remote(void)
 
 		gap = newer->local_time - older->local_time;
 		max_gap = cadence * 3;
-		if (gap <= 0 || gap > max_gap || older->segnum != newer->segnum
-			|| (obj->segnum != older->segnum && obj->segnum != newer->segnum))
+		if (gap <= 0 || gap > max_gap ) /* Slikenet Rule: Interpolate across segment boundaries to stop teleporting */
 		{
 			obj->pos = newer->pos;
 			obj->orient = newer->orient;

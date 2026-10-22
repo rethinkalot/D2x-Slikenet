@@ -363,7 +363,7 @@ multi_send_release_robot(int objnum)
 	multi_send_data(multibuf, 5, 2);
 }
 
-#define MIN_ROBOT_COM_GAP F1_0/12
+#define MIN_ROBOT_COM_GAP F1_0/20
 
 int
 multi_send_robot_frame(int sent)
@@ -736,7 +736,7 @@ multi_do_robot_position(const ubyte *buf)
 		}
 	}
 
-	set_thrust_from_velocity(&Objects[botnum]); // Try to smooth out movement
+// set_thrust_from_velocity disabled
 //	Objects[botnum].phys_info.drag = Robot_info[Objects[botnum].id].drag >> 4; // Set drag to low
 
 #ifndef WORDS_BIGENDIAN
