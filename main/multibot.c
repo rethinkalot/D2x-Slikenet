@@ -741,6 +741,13 @@ multi_do_robot_position(const ubyte *buf)
 
 #ifndef WORDS_BIGENDIAN
 	extract_shortpos(&Objects[botnum], (shortpos *)(buf+loc), 0);
+        {
+            vms_vector old_pos = Objects[botnum].pos;
+            // Smooth out 167 FPS packet delivery gaps without memory array leaks
+            Objects[botnum].pos.x = old_pos.x + ((Objects[botnum].pos.x - old_pos.x) >> 2);
+            Objects[botnum].pos.y = old_pos.y + ((Objects[botnum].pos.y - old_pos.y) >> 2);
+            Objects[botnum].pos.z = old_pos.z + ((Objects[botnum].pos.z - old_pos.z) >> 2);
+        }
 #else
 	memcpy((ubyte *)(sp.bytemat), (ubyte *)(buf + loc), 9);		loc += 9;
 	memcpy((ubyte *)&(sp.xo), (ubyte *)(buf + loc), 14);
