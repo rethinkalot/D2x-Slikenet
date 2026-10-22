@@ -2340,6 +2340,7 @@ typedef struct multi_interp_sample
 	short segnum;
 } multi_interp_sample;
 
+#define MULTI_INTERP_SAMPLES 36
 static multi_interp_sample multi_interp_history[MAX_PLAYERS][MULTI_INTERP_SAMPLES];
 static int multi_interp_count[MAX_PLAYERS];
 static int multi_interp_head[MAX_PLAYERS];

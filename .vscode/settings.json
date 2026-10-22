@@ -14,5 +14,6 @@
     "cmake.configureSettings": {
         "CMAKE_MAKE_PROGRAM": "C:/Programs/msys64/mingw64/bin/ninja.exe"
     },
-    "zenMode.centerLayout": false
+    "zenMode.centerLayout": false,
+    "C_Cpp.exclusionPolicy": "checkFilesAndFolders"
 }

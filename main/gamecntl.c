@@ -518,7 +518,11 @@ int HandleDemoKey(int key)
 				else
 					break;
 			}
-			newdemo_stop_playback();
+			{
+				int choice = nm_messagebox( NULL, 2, TXT_YES, TXT_NO, "Exit Demo Playback?" );
+				if (choice == 0)
+					newdemo_stop_playback();
+			}
 			break;
 		case KEY_UP:
 			Newdemo_vcr_state = ND_STATE_PLAYBACK;

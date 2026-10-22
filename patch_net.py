@@ -1,36 +1,31 @@
 import os
 
-file_path = r"main/multibot.c"
+file_udp_h = "main/net_udp.h"
+file_multi_c = "main/multi.c"
 
-if os.path.exists(file_path):
-    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-        lines = f.readlines()
-
-    target_found = False
-    new_lines = []
+# ---- Part 1: Update net_udp.h to 36 ----
+if os.path.exists(file_udp_h):
+    with open(file_udp_h, "r") as f:
+        text_h = f.read()
     
-    for line in lines:
-        new_lines.append(line)
-        # Strip trailing/leading white spaces and tabs to ensure a bulletproof match
-        if line.strip() == "extract_shortpos(&Objects[botnum], (shortpos *)(buf+loc), 0);":
-            target_found = True
-            # Zero-array blend: glides the bot from its current rendering frame coordinates
-            blend_code = (
-                "        {\n"
-                "            vms_vector old_pos = Objects[botnum].pos;\n"
-                "            // Smooth out 167 FPS packet delivery gaps without memory array leaks\n"
-                "            Objects[botnum].pos.x = old_pos.x + ((Objects[botnum].pos.x - old_pos.x) >> 2);\n"
-                "            Objects[botnum].pos.y = old_pos.y + ((Objects[botnum].pos.y - old_pos.y) >> 2);\n"
-                "            Objects[botnum].pos.z = old_pos.z + ((Objects[botnum].pos.z - old_pos.z) >> 2);\n"
-                "        }\n"
-            )
-            new_lines.append(blend_code)
+    for val in ["600", "60", "240", "24"]:
+        old_macro = f"#define NET_TELEMETRY_POSITION_CAPACITY {val}"
+        if old_macro in text_h:
+            text_h = text_h.replace(old_macro, "#define NET_TELEMETRY_POSITION_CAPACITY 36")
+            break
+            
+    with open(file_udp_h, "w") as f:
+        f.write(text_h)
+    print("Successfully bumped net_udp.h telemetry bounds to 36.")
 
-    if target_found:
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.writelines(new_lines)
-        print("[SUCCESS] Applied tab-stripped baseline low-pass blending filter.")
-    else:
-        print("[ERROR] Base line anchor not found. Indentation layout mismatch remains.")
-else:
-    print(f"[ERROR] Missing file path target: {file_path}")
+# ---- Part 2: Update multi.c to 36 ----
+if os.path.exists(file_multi_c):
+    with open(file_multi_c, "r") as f:
+        content_c = f.read()
+
+    # Replace our previous 24-frame macro injection with 36
+    if "#define MULTI_INTERP_SAMPLES 24" in content_c:
+        content_c = content_c.replace("#define MULTI_INTERP_SAMPLES 24", "#define MULTI_INTERP_SAMPLES 36")
+        with open(file_multi_c, "w") as f:
+            f.write(content_c)
+        print("Successfully bumped multi.c interpolation structures to 36.")
