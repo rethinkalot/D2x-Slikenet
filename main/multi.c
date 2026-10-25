@@ -2421,13 +2421,8 @@ multi_interp_update_remote(void)
       if (Game_mode & GM_MULTI_COOP) {
           pps = 60;
       } else {
-      // Slikenet Rule: 90 PPS max for PvP, capped at 60 PPS for COOP modes
-      if (Game_mode & GM_MULTI_COOP) {
-          pps = 60;
-      } else {
-          pps = Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90;
-      }
-      }
+      pps = Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90;
+	}
 	cadence = ((fix64)F1_0 + pps / 2) / pps;
 	delay = cadence * 3 / 2;
 	if (delay < MULTI_INTERP_MIN_DELAY)

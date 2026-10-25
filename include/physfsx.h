@@ -217,7 +217,7 @@ static inline char * PHYSFSX_fgets(char *buf, size_t n, PHYSFS_file *const fp)
 static inline int PHYSFSX_printf(PHYSFS_file *file, const char *format, ...)
 {
 	char buffer[1024];
-	va_list args;
+	__builtin_va_list args;
 
 	va_start(args, format);
 	vsprintf(buffer, format, args);

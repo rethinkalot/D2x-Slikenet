@@ -60,10 +60,11 @@ void multi_send_robot_position_sub(int objnum, int now);
 
 #define STANDARD_EXPL_DELAY (F1_0/4)
 #define MIN_CONTROL_TIME	F1_0*1
-#define ROBOT_TIMEOUT		F1_0*2
+#define ROBOT_TIMEOUT		F1_0*4 // Extended timeout cushion (was 2 seconds)
 
-#define MIN_TO_ADD	60
-#define MAX_TO_DELETE	61
+// 🚀 PERSISTENT pool targets: Lowest possible thresholds to prevent premature handover drops
+#define MIN_TO_ADD	10
+#define MAX_TO_DELETE	11
 
 int robot_controlled[MAX_ROBOTS_CONTROLLED];
 int robot_agitation[MAX_ROBOTS_CONTROLLED];
@@ -167,8 +168,8 @@ multi_check_robot_timeout(void)
 				if (robot_send_pending[i])
 					multi_send_robot_position(robot_controlled[i], 1);
 				multi_send_release_robot(robot_controlled[i]);
-//				multi_delete_controlled_robot(robot_controlled[i]);
-//				robot_controlled[i] = -1;
+				//				multi_delete_controlled_robot(robot_controlled[i]);
+				//				robot_controlled[i] = -1;
 			}
 		}
 	}			
@@ -451,11 +452,12 @@ multi_send_robot_position(int objnum, int force)
 	if (Objects[objnum].ctype.ai_info.REMOTE_OWNER != Player_num)
 		return;
 
-//	Objects[objnum].phys_info.drag = Robot_info[Objects[objnum].id].drag; // Set drag to normal
+		//	Objects[objnum].phys_info.drag = Robot_info[Objects[objnum].id].drag; // Set drag to normal
 
 	robot_last_send_time[Objects[objnum].ctype.ai_info.REMOTE_SLOT_NUM] = GameTime64;
 
 	robot_send_pending[Objects[objnum].ctype.ai_info.REMOTE_SLOT_NUM] = 1+force;
+{ FILE *rf=fopen("robotinfo.txt","a"); if(rf){ fputs("tx",rf); fputc(10,rf); fclose(rf);} }
 
 	return;
 }
@@ -674,7 +676,7 @@ multi_do_release_robot(const ubyte *buf)
 	botnum = objnum_remote_to_local(remote_botnum, (sbyte)buf[4]);
 
 	if ((botnum < 0) || (botnum > Highest_object_index)) {
-//		Int3(); // See rob
+		//Int3(); // See rob
 		return;
 	}
 
@@ -691,13 +693,10 @@ multi_do_release_robot(const ubyte *buf)
 
 	Objects[botnum].ctype.ai_info.REMOTE_OWNER = -1;
 	Objects[botnum].ctype.ai_info.REMOTE_SLOT_NUM = 0;
+
 }
-
-void
-multi_do_robot_position(const ubyte *buf)
-{
-	// Process robot movement sent by another player
-
+void multi_do_robot_position(const ubyte *buf){
+	// Start of multi_do_robot_position function
 	short botnum, remote_botnum;
 	char pnum;
 	int loc = 1;
@@ -735,28 +734,64 @@ multi_do_robot_position(const ubyte *buf)
 			return;
 		}
 	}
-
-// set_thrust_from_velocity disabled
-//	Objects[botnum].phys_info.drag = Robot_info[Objects[botnum].id].drag >> 4; // Set drag to low
-
+}
 #ifndef WORDS_BIGENDIAN
-	extract_shortpos(&Objects[botnum], (shortpos *)(buf+loc), 0);
-        {
-            vms_vector old_pos = Objects[botnum].pos;
-            // Smooth out 167 FPS packet delivery gaps without memory array leaks
-            Objects[botnum].pos.x = old_pos.x + ((Objects[botnum].pos.x - old_pos.x) >> 2);
-            Objects[botnum].pos.y = old_pos.y + ((Objects[botnum].pos.y - old_pos.y) >> 2);
-            Objects[botnum].pos.z = old_pos.z + ((Objects[botnum].pos.z - old_pos.z) >> 2);
-        }
+	{
+		vms_vector client_pos = Objects[botnum].pos;
+		vms_matrix client_orient = Objects[botnum].orient;
+		
+		if (Objects[botnum].ctype.ai_info.REMOTE_OWNER != Player_num)
+		{
+			Objects[botnum].mtype.phys_info.velocity.x = 0;
+			Objects[botnum].mtype.phys_info.velocity.y = 0;
+			Objects[botnum].mtype.phys_info.velocity.z = 0;
+		}
+
+		extract_shortpos(&Objects[botnum], (shortpos *)(buf+loc), 0);
+		
+		if (Objects[botnum].ctype.ai_info.REMOTE_OWNER != Player_num)
+		{
+			vms_vector pos_error;
+			vm_vec_sub(&pos_error, &Objects[botnum].pos, &client_pos);
+			
+			if (vm_vec_mag_quick(&pos_error) > F1_0 * 15) {
+				update_object_seg(&Objects[botnum]);
+			} else {
+				vms_matrix target_orient = Objects[botnum].orient;
+				Objects[botnum].pos = client_pos;
+				
+				Objects[botnum].orient.fvec.x = client_orient.fvec.x + ((target_orient.fvec.x - client_orient.fvec.x) >> 2);
+				Objects[botnum].orient.fvec.y = client_orient.fvec.y + ((target_orient.fvec.y - client_orient.fvec.y) >> 2);
+				Objects[botnum].orient.fvec.z = client_orient.fvec.z + ((target_orient.fvec.z - client_orient.fvec.z) >> 2);
+				
+				Objects[botnum].orient.uvec.x = client_orient.uvec.x + ((target_orient.uvec.x - client_orient.uvec.x) >> 2);
+				Objects[botnum].orient.uvec.y = client_orient.uvec.y + ((target_orient.uvec.y - client_orient.uvec.y) >> 2);
+				Objects[botnum].orient.uvec.z = client_orient.uvec.z + ((target_orient.uvec.z - client_orient.uvec.z) >> 2);
+				
+				Objects[botnum].orient.rvec.x = client_orient.rvec.x + ((target_orient.rvec.x - client_orient.rvec.x) >> 2);
+				Objects[botnum].orient.rvec.y = client_orient.rvec.y + ((target_orient.rvec.y - client_orient.rvec.y) >> 2);
+				Objects[botnum].orient.rvec.z = client_orient.rvec.z + ((target_orient.rvec.z - client_orient.rvec.z) >> 2);
+				
+				vm_vec_normalize_quick(&Objects[botnum].orient.fvec);
+				vm_vec_normalize_quick(&Objects[botnum].orient.uvec);
+				vm_vec_normalize_quick(&Objects[botnum].orient.rvec);
+
+				Objects[botnum].mtype.phys_info.velocity.x = (pos_error.x * 2);
+				Objects[botnum].mtype.phys_info.velocity.y = (pos_error.y * 2);
+				Objects[botnum].mtype.phys_info.velocity.z = (pos_error.z * 2);
+				
+				update_object_seg(&Objects[botnum]);
+			}
+		}
+	}
 #else
 	memcpy((ubyte *)(sp.bytemat), (ubyte *)(buf + loc), 9);		loc += 9;
 	memcpy((ubyte *)&(sp.xo), (ubyte *)(buf + loc), 14);
 	extract_shortpos(&Objects[botnum], &sp, 1);
 #endif
-}
 
 void
-multi_do_robot_fire(const ubyte *buf)
+multi_do_robot_fire
 {
 	// Send robot fire event
 	int loc = 1;
@@ -952,7 +987,7 @@ multi_do_create_robot(const ubyte *buf)
 		return; // Cannot create object!
 	
 	obj->matcen_creator = (robotcen-Station) | 0x80;
-//	extract_orient_from_segment(&obj->orient, &Segments[robotcen->segnum]);
+		//	extract_orient_from_segment(&obj->orient, &Segments[robotcen->segnum]);
 	vm_vec_sub( &direction, &ConsoleObject->pos, &obj->pos );
 	vm_vector_2_matrix( &obj->orient, &direction, &obj->orient.uvec, NULL);
 	morph_start( obj );
