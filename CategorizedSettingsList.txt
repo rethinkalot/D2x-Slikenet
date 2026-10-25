@@ -1,0 +1,21 @@
+# Categorized Settings
+
+## Timing
+- ROBOT_TIMEOUT
+- robot_last_send_time
+- MIN_CONTROL_TIME
+
+## State
+- robot_controlled
+- robot_send_pending
+- robot_fired
+- blend_has_target
+
+## Network
+- MULTI_ROBOT_PRIORITY
+- GM_MULTI_ROBOTS
+- GM_MULTI_COOP
+
+## Movement
+- extract_shortpos
+- smoothing

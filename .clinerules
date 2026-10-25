@@ -42,6 +42,7 @@ search, read, and analyze the local project files to efficiently produce output 
  target straight to:      📂C:/Games/D2s/build/main/d2x-redux.exe
  testbench folder:        📂C:/Games/D2x 📂C:/Games/D2x2
  backup D2s D2x:          📂C:/BackUpDescent/backups/D2sBackup
+
 ## REBUILD LIBRARIES and COMPILE
 cd c/Games/D2s
 export PATH="c/Programs/msys64/mingw64/bin:$PATH

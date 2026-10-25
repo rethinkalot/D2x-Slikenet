@@ -4297,7 +4297,7 @@ void show_HUD_names()
 					if (show_typing && multi_sending_message[pnum])
 					{
 						if (s[0])
-							strncat( s, ", typing", 8);
+							strncat( s, ", typing", 9);
 						else
 							strncpy( s, "Typing", 6 );
 					}

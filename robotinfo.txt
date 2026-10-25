@@ -1,0 +1,2 @@
+# robotinfo.txt (placeholder)
+# To be generated at game exit with telemetry

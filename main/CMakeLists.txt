@@ -191,9 +191,7 @@ if(PNG)
 endif()
 target_link_libraries(d2x-redux PRIVATE 2d 3d arch_sdl iff libmve maths mem misc texmap)
 if(TARGET slikenet_modern)
-    target_link_libraries(d2x-redux PRIVATE
-        "$<LINK_LIBRARY:WHOLE_ARCHIVE,slikenet_modern>"
-    )
+target_link_libraries(d2x-redux PRIVATE slikenet_modern)
 endif()
 if(DXX_USE_BUNDLED_DEPS)
     target_link_libraries(d2x-redux PUBLIC ${DXX_PHYSFS_TARGET} ${DXX_SDL_TARGET})
