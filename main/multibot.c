@@ -676,7 +676,6 @@ multi_do_release_robot(const ubyte *buf)
 	botnum = objnum_remote_to_local(remote_botnum, (sbyte)buf[4]);
 
 	if ((botnum < 0) || (botnum > Highest_object_index)) {
-		//Int3(); // See rob
 		return;
 	}
 
