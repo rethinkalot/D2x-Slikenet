@@ -734,7 +734,6 @@ void multi_do_robot_position(const ubyte *buf){
 			return;
 		}
 	}
-}
 #ifndef WORDS_BIGENDIAN
 	{
 		vms_vector client_pos = Objects[botnum].pos;
@@ -776,9 +775,9 @@ void multi_do_robot_position(const ubyte *buf){
 				vm_vec_normalize_quick(&Objects[botnum].orient.uvec);
 				vm_vec_normalize_quick(&Objects[botnum].orient.rvec);
 
-				Objects[botnum].mtype.phys_info.velocity.x = (pos_error.x * 2);
-				Objects[botnum].mtype.phys_info.velocity.y = (pos_error.y * 2);
-				Objects[botnum].mtype.phys_info.velocity.z = (pos_error.z * 2);
+				Objects[botnum].mtype.phys_info.velocity.x = (pos_error.x * 4);
+				Objects[botnum].mtype.phys_info.velocity.y = (pos_error.y * 4);
+				Objects[botnum].mtype.phys_info.velocity.z = (pos_error.z * 4);
 				
 				update_object_seg(&Objects[botnum]);
 			}
@@ -789,9 +788,10 @@ void multi_do_robot_position(const ubyte *buf){
 	memcpy((ubyte *)&(sp.xo), (ubyte *)(buf + loc), 14);
 	extract_shortpos(&Objects[botnum], &sp, 1);
 #endif
+}
 
 void
-multi_do_robot_fire
+multi_do_robot_fire(const ubyte *buf)
 {
 	// Send robot fire event
 	int loc = 1;
