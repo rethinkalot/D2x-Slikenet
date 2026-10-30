@@ -1,80 +1,52 @@
 import os
-import re
 
-print("[INFO] Initiating Descent 2 multi-file type alignment pass...")
+def patch_multibot_jolts():
+    file_path = r"C:/Games/D2s/build/main/multibot.c"
+    if not os.path.exists(file_path):
+        # Fallback tracking if target is relative to source folder structures
+        file_path = "multibot.c"
 
-multi_path = "multi.c"
-if not os.path.exists(multi_path):
-    multi_path = r"C:/Games/D2s/main/multi.c"
+    print(f"Opening memory stream for: {file_path}")
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
 
-net_path = "net_udp.c"
-if not os.path.exists(net_path):
-    net_path = r"C:/Games/D2s/main/net_udp.c"
+    # Locate the target tracking block within non-owner shortpos extraction
+    target_block = """                Objects[botnum].orient.fvec.x = client_orient.fvec.x + ((target_orient.fvec.x - client_orient.fvec.x) >> 2);
+                Objects[botnum].orient.fvec.y = client_orient.fvec.y + ((target_orient.fvec.y - client_orient.fvec.y) >> 2);
+                Objects[botnum].orient.fvec.z = client_orient.fvec.z + ((target_orient.fvec.z - client_orient.fvec.z) >> 2);
+                
+                Objects[botnum].orient.uvec.x = client_orient.uvec.x + ((target_orient.uvec.x - client_orient.uvec.x) >> 2);
+                Objects[botnum].orient.uvec.y = client_orient.uvec.y + ((target_orient.uvec.y - client_orient.uvec.y) >> 2);
+                Objects[botnum].orient.uvec.z = client_orient.uvec.z + ((target_orient.uvec.z - client_orient.uvec.z) >> 2);
+                
+                Objects[botnum].orient.rvec.x = client_orient.rvec.x + ((target_orient.rvec.x - client_orient.rvec.x) >> 2);
+                Objects[botnum].orient.rvec.y = client_orient.rvec.y + ((target_orient.rvec.y - client_orient.rvec.y) >> 2);
+                Objects[botnum].orient.rvec.z = client_orient.rvec.z + ((target_orient.rvec.z - client_orient.rvec.z) >> 2);"""
 
-# ----------------- STEP 1: ADD KICK FUNCTION TO NET_UDP.C -----------------
-if os.path.exists(net_path):
-    print(f"[INFO] Injecting net_udp_kick_all_observers into: {net_path}")
-    with open(net_path, "r", encoding="utf-8") as f:
-        net_content = f.read()
+    # Inject an inversion boundary checker that prevents internal matrix collapses
+    replacement_block = """                // Slikenet: Guard matrix integrity during extreme cross-quadrant transitions behind objects
+                fix dot_check = vm_vec_dot(&client_orient.fvec, &target_orient.fvec);
+                int blend_shift = (dot_check < -F1_0 / 2) ? 1 : 2; // Accelerate tracking convergence on inversion thresholds
 
-    # Target the bottom of net_udp.c to safely append our helper function
-    kick_function = """
-void net_udp_kick_all_observers(void)
-{
-    int i;
-    for (i = 0; i < Netgame.max_numobservers; i++) {
-        if (Netgame.observers[i].connected == 1) {
-            net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
-        }
-    }
-}
-"""
-    if "net_udp_kick_all_observers" not in net_content:
-        net_content += kick_function
-        with open(net_path, "w", encoding="utf-8", newline="\n") as f:
-            f.write(net_content)
-        print("[SUCCESS] net_udp_kick_all_observers added to net_udp.c.")
-else:
-    print("[ERROR] net_udp_c could not be resolved.")
+                Objects[botnum].orient.fvec.x = client_orient.fvec.x + ((target_orient.fvec.x - client_orient.fvec.x) >> blend_shift);
+                Objects[botnum].orient.fvec.y = client_orient.fvec.y + ((target_orient.fvec.y - client_orient.fvec.y) >> blend_shift);
+                Objects[botnum].orient.fvec.z = client_orient.fvec.z + ((target_orient.fvec.z - client_orient.fvec.z) >> blend_shift);
+                
+                Objects[botnum].orient.uvec.x = client_orient.uvec.x + ((target_orient.uvec.x - client_orient.uvec.x) >> blend_shift);
+                Objects[botnum].orient.uvec.y = client_orient.uvec.y + ((target_orient.uvec.y - client_orient.uvec.y) >> blend_shift);
+                Objects[botnum].orient.uvec.z = client_orient.uvec.z + ((target_orient.uvec.z - client_orient.uvec.z) >> blend_shift);
+                
+                Objects[botnum].orient.rvec.x = client_orient.rvec.x + ((target_orient.rvec.x - client_orient.rvec.x) >> blend_shift);
+                Objects[botnum].orient.rvec.y = client_orient.rvec.y + ((target_orient.rvec.y - client_orient.rvec.y) >> blend_shift);
+                Objects[botnum].orient.rvec.z = client_orient.rvec.z + ((target_orient.rvec.z - client_orient.rvec.z) >> blend_shift);"""
 
-# ----------------- STEP 2: UPDATE MULTI.C TO CALL THE NEW FUNCTION -----------------
-if os.path.exists(multi_path):
-    print(f"[INFO] Updating /noobs command routing in: {multi_path}")
-    with open(multi_path, "r", encoding="utf-8") as f:
-        multi_content = f.read()
-
-    # Target the old broken loop inside the /noobs condition block
-    old_noobs_block = """            for (int i = 0; i < Netgame.max_numobservers; i++) {
-                if (Netgame.observers[i].connected == 1) {
-                    net_udp_dump_player(Netgame.observers[i].addr, 0, DUMP_KICKED);
-                }
-            }"""
-            
-    # Alternative old block check if it still had the old protocol subfields
-    old_noobs_block_alt = """            for (int i = 0; i < Netgame.max_numobservers; i++) {
-                if (Netgame.observers[i].connected == 1) {
-                    net_udp_dump_player(Netgame.observers[i].protocol.udp.addr, 0, DUMP_KICKED);
-                }
-            }"""
-
-    new_noobs_block = """            extern void net_udp_kick_all_observers(void);
-            net_udp_kick_all_observers();"""
-
-    if old_noobs_block in multi_content:
-        multi_content = multi_content.replace(old_noobs_block, new_noobs_block)
-    elif old_noobs_block_alt in multi_content:
-        multi_content = multi_content.replace(old_noobs_block_alt, new_noobs_block)
+    if target_block in content:
+        content = content.replace(target_block, replacement_block)
+        with open(file_path, "w", encoding="utf-8", newline="\r\n") as f:
+            f.write(content)
+        print("SUCCESS: Smooth matrix tracking patch applied successfully with CR/LF preservation.")
     else:
-        # Fallback regex substitution to find and clean the block regardless of exact address spelling
-        multi_content = re.sub(
-            r"for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*Netgame\.max_numobservers\s*;\s*i\s*\+\+\s*\)\s*\{[\s\n]*if\s*\(\s*Netgame\.observers\[i\]\.connected\s*==\s*1\s*\)\s*\{.*?\n\s*\}\s*\n\s*\}",
-            "extern void net_udp_kick_all_observers(void);\n            net_udp_kick_all_observers();",
-            multi_content,
-            flags=re.DOTALL
-        )
+        print("ERROR: Target vector block not found. Code might already be altered or formatted differently.")
 
-    with open(multi_path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(multi_content)
-    print("[SUCCESS] multi.c redirected to use new network-safe kick function.")
-else:
-    print("[ERROR] multi.c could not be resolved.")
+if __name__ == "__main__":
+    patch_multibot_jolts()

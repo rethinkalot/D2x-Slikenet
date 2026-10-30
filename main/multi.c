@@ -794,7 +794,7 @@ void multi_endlevel_score(void)
             Game_suspended = 0; // Completely bypass background thread delays
             
             // If the window completely loses OS focus, freeze UI paint draws safely to protect memory
-            if (Game_wind && !window_has_focus(Game_wind)) {
+            if (Game_wind && !window_is_visible(Game_wind)) {
                 Show_kill_list = 0; // Mute HUD elements dynamically to stop background heap crashes
             } else {
                 Show_kill_list = 1; // Restore hud when window focus returns
@@ -7187,9 +7187,10 @@ void save_hoard_data(void)
 
 void multi_process_data(const ubyte *buf, int len)
 {
-	if (buf && len > 1 && buf >= MAX_PLAYERS && buf != OBSERVER_PLAYER_ID) return;
-	if (buf && (buf == MULTI_POSITION || buf == MULTI_SHIP_STATUS || buf == MULTI_TYPING_STATE)) {
-		if (buf == OBSERVER_PLAYER_ID || is_observer()) return;
+	// Correct array index tracking: buf[0] is the network opcode, buf[1] is the player ID
+	if (buf && len > 1 && buf[1] >= MAX_PLAYERS && buf[1] != OBSERVER_PLAYER_ID) return;
+	if (buf && (buf[0] == MULTI_POSITION || buf[0] == MULTI_SHIP_STATUS || buf[0] == MULTI_TYPING_STATE)) {
+		if (buf[1] == OBSERVER_PLAYER_ID || is_observer()) return;
 	}
     // Spectator Mode Boundary Shield: Guard against elevated array constants crashing the executable
     if (buf && len > 1 && buf[1] >= MAX_PLAYERS && buf[1] != OBSERVER_PLAYER_ID) {
