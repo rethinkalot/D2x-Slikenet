@@ -1,7 +1,7 @@
 # CMakeList.txt : CMake project for d2x-redux, include source and define
 # project specific logic here.
 #
-cmake_minimum_required (VERSION 3.21)
+cmake_minimum_required (VERSION 3.24)
 project(
     d2x-redux
     VERSION 1.1
