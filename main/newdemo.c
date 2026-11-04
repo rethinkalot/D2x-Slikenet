@@ -3010,7 +3010,8 @@ int newdemo_read_frame_information(int rewrite)
 	else
 	{
 		Rear_view = 0;
-		if (PlayerCfg.CurrentCockpitMode != PlayerCfg.PreferredCockpitMode)
+		// init_cockpit forces full screen for an observer without a cockpit; reselecting the preferred mode every frame would rebuild the canvases each time
+		if (PlayerCfg.CurrentCockpitMode != PlayerCfg.PreferredCockpitMode && !(is_observer() && !can_draw_observer_cockpit()))
 			select_cockpit(PlayerCfg.PreferredCockpitMode);
 	}
 

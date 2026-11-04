@@ -2354,7 +2354,6 @@ multi_do_position(const ubyte *buf)
 //	received.  Nothing is ever extrapolated: when the render time is at or past
 //	the newest update, the newest update is used verbatim.
 
-#define MULTI_INTERP_SAMPLES 16
 #define MULTI_INTERP_MAX_AGE (F1_0 / 4)		/* newest update older than this: leave ship alone */
 #define MULTI_INTERP_MIN_DELAY (F1_0 / 200)
 #define MULTI_INTERP_MAX_DELAY (F1_0 / 10)
