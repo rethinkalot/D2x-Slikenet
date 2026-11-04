@@ -337,7 +337,7 @@ static kc_item kc_observer_controls[NUM_OBSERVER_CONTROLS * NUM_OBSERVER_BINDING
 	{  9,  0,108,201, 26, -1, -1, -1, -1, "", BT_JOY_BUTTON, 255, NULL, 0, NULL },
 	{ 10,  0,108,236, 26, -1, -1, -1, -1, "", BT_MOUSE_BUTTON, 255, NULL, 0, NULL },
 	{ 11,  0,108,276, 26, -1, -1, -1, -1, "", BT_MOUSE_BUTTON, 255, NULL, 0, NULL },
-	{ 12,  8,148, 86, 26, -1, -1, -1, -1, "Follow/free mode", BT_KEY, 255, NULL, 0, NULL },
+	{ 12,  8,148, 86, 26, -1, -1, -1, -1, "Cycle camera", BT_KEY, 255, NULL, 0, NULL },
 	{ 13,  0,148,131, 26, -1, -1, -1, -1, "", BT_KEY, 255, NULL, 0, NULL },
 	{ 14,  0,148,165, 26, -1, -1, -1, -1, "", BT_JOY_BUTTON, 255, NULL, 0, NULL },
 	{ 15,  0,148,201, 26, -1, -1, -1, -1, "", BT_JOY_BUTTON, 255, NULL, 0, NULL },
@@ -1153,7 +1153,7 @@ void kc_change_joyaxis( kc_menu *menu, d_event *event, kc_item * item )
 
 	if ( abs(value-menu->old_jaxis[axis])<32 )
 		return;
-	con_printf(CON_DEBUG, "Axis Movement detected: Axis %i\n", axis);
+	con_printf(CON_VERBOSE, "Axis Movement detected: Axis %i\n", axis);
 
 	for (i=0; i<menu->nitems; i++ )
 	{

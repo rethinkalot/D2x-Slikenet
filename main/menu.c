@@ -1354,8 +1354,8 @@ int graphics_config_menuset(newmenu *menu, d_event *event, void *userdata)
 void graphics_config()
 {
 #ifdef OGL
-	// +1 headroom for the conditional VSync item (see gr_vsync_supported).
-	newmenu_item m[20];
+	// +1 headroom for the conditional VSync item (see gr_vsync_supported); the menu already uses 20 items without it.
+	newmenu_item m[22];
 	int i = 0;
 #else
 	// +1 headroom for the conditional VSync item (see gr_vsync_supported).
@@ -2304,7 +2304,8 @@ void do_misc_menu()
 		ADD_CHECK(21, "Suppress HUD Messages (SP)",PlayerCfg.NoRedundancy);
 		ADD_CHECK(22, "Show Player chat only (Multi)",PlayerCfg.MultiMessages);
 		ADD_CHECK(23, "No Rankings (Multi)",PlayerCfg.NoRankings);
-		ADD_CHECK(24, "Show D2-style Prox. Bomb Gauge",PlayerCfg.BombGauge);
+		// D2 always draws its own bomb gauge, so the old D1 "BombGauge" toggle has no effect here. Keep the row as a spacer so the indices below stay put.
+		m[24].type = NM_TYPE_TEXT; m[24].text = "";
 		ADD_CHECK(25, "Free Flight controls in Automap",PlayerCfg.AutomapFreeFlight);
 		ADD_CHECK(26, "No Weapon Autoselect when firing",PlayerCfg.NoFireAutoselect);
 		ADD_CHECK(27, "Autoselect after firing",PlayerCfg.SelectAfterFire);
@@ -2403,7 +2404,6 @@ void do_misc_menu()
 		PlayerCfg.NoRedundancy 			= m[21].value;
 		PlayerCfg.MultiMessages 		= m[22].value;
 		PlayerCfg.NoRankings 			= m[23].value;
-		PlayerCfg.BombGauge			= m[24].value;
 		PlayerCfg.AutomapFreeFlight		= m[25].value;
 		PlayerCfg.NoFireAutoselect		= m[26].value;
 		PlayerCfg.SelectAfterFire		= m[27].value; if(PlayerCfg.SelectAfterFire) { PlayerCfg.NoFireAutoselect = 1; }

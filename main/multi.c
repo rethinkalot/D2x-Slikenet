@@ -287,13 +287,13 @@ void add_observatory_damage_stat(int player_num, fix shields_delta, fix new_shie
         source_id = SHIP_COLLISION_DAMAGE;
     }
 
-    // Combine different laser levels into the same source_id. They aren't named differently in
-    // weapon_id_to_name, so we don't want them split up in summaries.
-    // There is a gap between normal laser levels and super laser levels, so we have to check
-    // each range separately.
-    if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_WEAPON && 
-        ((source_id > LASER_ID_L1 && source_id <= LASER_ID_L4) || (source_id >= LASER_ID_L5 && source_id <= LASER_ID_L6))) {
-        source_id = LASER_ID_L1;
+    // Combine laser levels that weapon_id_to_name names the same, so they aren't split up in summaries:
+    // L1-L4 are "laser" and L5-L6 are "super laser". There is a gap between the two ranges, so check each separately.
+    if (killer_type == OBJ_PLAYER && damage_type == DAMAGE_WEAPON) {
+        if (source_id > LASER_ID_L1 && source_id <= LASER_ID_L4)
+            source_id = LASER_ID_L1;
+        else if (source_id > LASER_ID_L5 && source_id <= LASER_ID_L6)
+            source_id = LASER_ID_L5;
     }
 
     // Record player's damage over time.
@@ -1447,9 +1447,10 @@ void multi_do_frame(void)
 
     multi_do_protocol_frame(0, 1);
 
-    // Draw remote ships at the smoothed (delayed) position, now that this
-    // frame's position updates have been read.
-    multi_interp_update_remote();
+    // Remote ships are drawn at the newest packet and moved on by physics between packets, as in D1s.
+    // multi_interp_update_remote() (delayed smoothing) is left off: it rewrites obj->pos every frame, which
+    // made ships hold and snap on late packets and kept resetting the observer camera's update timer.
+    // multi_interp_push_position() still records history, so it can be switched back on here.
 
     if (multi_quit_game)
     {
@@ -1804,6 +1805,11 @@ multi_send_macro(int key)
 void
 multi_send_message_start()
 {
+    // Observer chat off: don't enter typing mode, or multi_send_message_end() would return early and leave it stuck
+    if (is_observer() && !PlayerCfg.ObsChat[get_observer_game_mode()]) {
+        return;
+    }
+
     if (Game_mode&GM_MULTI) {
         multi_sending_message[Player_num] = 1;
         if (!is_observer()) {
@@ -3562,7 +3568,7 @@ void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_
     PUT_INTEL_INT(multibuf+16, ownship->orient.fvec.z);
 
     //multi_send_data(multibuf, 8, 1);
-    multi_send_data(multibuf, 20, 1);
+    multi_send_data(multibuf, 20, 2); // priority 2: reliable, shots must not drop
 }
 
 void
@@ -3822,9 +3828,9 @@ void multi_powcap_cap_objects()
 
     // Don't do the adjustment stuff for Hoard mode
     if (!(Game_mode & GM_HOARD))
-        Players[Player_num].secondary_ammo[2]/=4;
+        Players[Player_num].secondary_ammo[PROXIMITY_INDEX]/=4;
 
-    Players[Player_num].secondary_ammo[7]/=4;
+    Players[Player_num].secondary_ammo[SMART_MINE_INDEX]/=4;
 
     for (index=0;index<MAX_SECONDARY_WEAPONS;index++)
     {
@@ -3844,8 +3850,8 @@ void multi_powcap_cap_objects()
     }
 
     if (!(Game_mode & GM_HOARD))
-        Players[Player_num].secondary_ammo[2]*=4;
-    Players[Player_num].secondary_ammo[7]*=4;
+        Players[Player_num].secondary_ammo[PROXIMITY_INDEX]*=4;
+    Players[Player_num].secondary_ammo[SMART_MINE_INDEX]*=4;
 
     if (Players[Player_num].laser_level > MAX_LASER_LEVEL)
         if (PowerupsInMine[POW_SUPER_LASER]+1 > MaxPowerupsAllowed[POW_SUPER_LASER])
@@ -6512,10 +6518,15 @@ void multi_send_ship_status_for_frame()
     // Setup ship status packet.
     multibuf[0] = MULTI_SHIP_STATUS;
     multibuf[1] = Player_num;
-    multibuf[2] = Players[Player_num].laser_level;
+    // The weapon flag words are 16 bits (Phoenix and Omega are primary bits 8-9, Mercury and Earthshaker
+    // secondary bits 8-9) but the packet has one byte each. laser_level is at most 5, so its top bits
+    // carry the high bits of both words and the packet size stays 43.
+    multibuf[2] = (Players[Player_num].laser_level & 7)
+        | (((Players[Player_num].primary_weapon_flags >> 8) & 3) << 3)
+        | (((Players[Player_num].secondary_weapon_flags >> 8) & 3) << 5);
     PUT_INTEL_SHORT(multibuf + 3, Players[Player_num].flags);
     PUT_INTEL_SHORT(multibuf + 5, Players[Player_num].primary_ammo[1]);
-    multibuf[7] = Players[Player_num].primary_weapon_flags;
+    multibuf[7] = Players[Player_num].primary_weapon_flags & 0xff;
     multibuf[8] = (ubyte)Players[Player_num].primary_weapon;
     PUT_INTEL_SHORT(multibuf + 9, Players[Player_num].secondary_ammo[0]);
     PUT_INTEL_SHORT(multibuf + 11, Players[Player_num].secondary_ammo[1]);
@@ -6527,7 +6538,7 @@ void multi_send_ship_status_for_frame()
     PUT_INTEL_SHORT(multibuf + 23, Players[Player_num].secondary_ammo[7]);
     PUT_INTEL_SHORT(multibuf + 25, Players[Player_num].secondary_ammo[8]);
     PUT_INTEL_SHORT(multibuf + 27, Players[Player_num].secondary_ammo[9]);
-    multibuf[29] = Players[Player_num].secondary_weapon_flags;
+    multibuf[29] = Players[Player_num].secondary_weapon_flags & 0xff;
     multibuf[30] = (ubyte)Players[Player_num].secondary_weapon;
     PUT_INTEL_INT(multibuf + 31, Players[Player_num].energy);
     PUT_INTEL_INT(multibuf + 35, Players[Player_num].homing_object_dist);
@@ -6540,10 +6551,10 @@ void multi_do_ship_status( const ubyte *buf )
 {
     if (is_observer())
     {
-        Players[buf[1]].laser_level = buf[2];
+        Players[buf[1]].laser_level = buf[2] & 7;
         Players[buf[1]].flags = GET_INTEL_SHORT(buf + 3);
         Players[buf[1]].primary_ammo[1] = GET_INTEL_SHORT(buf + 5);
-        Players[buf[1]].primary_weapon_flags = buf[7];
+        Players[buf[1]].primary_weapon_flags = buf[7] | (((buf[2] >> 3) & 3) << 8);
         Players[buf[1]].primary_weapon = (sbyte)buf[8];
         Players[buf[1]].secondary_ammo[0] = GET_INTEL_SHORT(buf + 9);
         Players[buf[1]].secondary_ammo[1] = GET_INTEL_SHORT(buf + 11);
@@ -6555,7 +6566,7 @@ void multi_do_ship_status( const ubyte *buf )
         Players[buf[1]].secondary_ammo[7] = GET_INTEL_SHORT(buf + 23);
         Players[buf[1]].secondary_ammo[8] = GET_INTEL_SHORT(buf + 25);
         Players[buf[1]].secondary_ammo[9] = GET_INTEL_SHORT(buf + 27);
-        Players[buf[1]].secondary_weapon_flags = buf[29];
+        Players[buf[1]].secondary_weapon_flags = buf[29] | (((buf[2] >> 5) & 3) << 8);
         Players[buf[1]].secondary_weapon = (sbyte)buf[30];
         Players[buf[1]].energy = GET_INTEL_INT(buf + 31);
         Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 35);
@@ -7187,20 +7198,13 @@ void save_hoard_data(void)
 
 void multi_process_data(const ubyte *buf, int len)
 {
-	// Correct array index tracking: buf[0] is the network opcode, buf[1] is the player ID
-	if (buf && len > 1 && buf[1] >= MAX_PLAYERS && buf[1] != OBSERVER_PLAYER_ID) return;
-	if (buf && (buf[0] == MULTI_POSITION || buf[0] == MULTI_SHIP_STATUS || buf[0] == MULTI_TYPING_STATE)) {
-		if (buf[1] == OBSERVER_PLAYER_ID || is_observer()) return;
+	// Pilot telemetry carries the sending player in byte 1, which indexes Players[]: drop anything that is
+	// not a real player slot. Only these types are checked, because for other messages byte 1 is not a
+	// player (a door-open message has the low byte of a segment number there). Observer nodes must still
+	// receive these from players: MULTI_SHIP_STATUS is how an observer sees the watched player's energy and ammo.
+	if (buf && len > 1 && (buf[0] == MULTI_POSITION || buf[0] == MULTI_SHIP_STATUS || buf[0] == MULTI_TYPING_STATE)) {
+		if (buf[1] >= MAX_PLAYERS || buf[1] == OBSERVER_PLAYER_ID) return;
 	}
-    // Spectator Mode Boundary Shield: Guard against elevated array constants crashing the executable
-    if (buf && len > 1 && buf[1] >= MAX_PLAYERS && buf[1] != OBSERVER_PLAYER_ID) {
-        return;
-    }
-    if (buf && (buf[0] == MULTI_POSITION || buf[0] == MULTI_SHIP_STATUS || buf[0] == MULTI_TYPING_STATE)) {
-        if (buf[1] == OBSERVER_PLAYER_ID || is_observer()) {
-            return; // Safely drop pilot-specific telemetry if received on an observer node
-        }
-    }
     // Take an entire message (that has already been checked for validity,
     // if necessary) and act on it.
 

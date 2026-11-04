@@ -388,7 +388,7 @@ multi_send_robot_frame(int sent)
             if (robot_fired[sending])
             {
                 robot_fired[sending] = 0;
-                multi_send_data(robot_fire_buf[sending], 18, 1);
+                multi_send_data(robot_fire_buf[sending], 18, 2); // reliable: shots must not drop
             }
 
             if (!(Game_mode & GM_NETWORK))
@@ -505,7 +505,7 @@ multi_send_robot_fire(int objnum, int gun_num, vms_vector *fire)
         robot_fired[slot] = 1;
     }
     else
-        multi_send_data(multibuf, loc, 0); // Not our robot, send ASAP
+        multi_send_data(multibuf, loc, 2); // reliable: shots must not drop
 }
 
 void

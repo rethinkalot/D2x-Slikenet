@@ -16,7 +16,6 @@
 #define CON_NET_RX    -5
 #define CON_NET_STATUS -6
 #define CON_NET_DEALLOC -7
-#define CON_NET_SESSION -8
 
 /* Network telemetry priorities. The console renders these with their own
  * colours (see con_draw) and only emits them when the game was started with

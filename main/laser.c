@@ -693,17 +693,17 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 
 	obj->shields = Weapon_info[obj->id].strength[Difficulty_level];
 	if( using_original_d1_weapons()) {
-		if(obj->id == 0) {        // Laser 1
+		if(obj->id == LASER_ID_L1) {        // Laser 1
 			obj->shields = 10 * F1_0; 
-		} else if(obj->id == 1) { // Laser 2
+		} else if(obj->id == LASER_ID_L2) { // Laser 2
 			obj->shields = 11 * F1_0; 
-		} else if(obj->id == 2) { // Laser 3
+		} else if(obj->id == LASER_ID_L3) { // Laser 3
 			obj->shields = 12 * F1_0; 
-		} else if(obj->id == 3 || obj->id == 30 || obj->id == 31) { // Laser 4
+		} else if(obj->id == LASER_ID_L4 || obj->id == LASER_ID_L5 || obj->id == LASER_ID_L6) { // Laser 4
 			obj->shields = 13 * F1_0; 
-		} else if(obj->id == 12) { // Spread
+		} else if(obj->id == SPREADFIRE_ID) { // Spread
 			obj->shields = 10 * F1_0; 
-		} else if(obj->id == 14) { // Fusion
+		} else if(obj->id == FUSION_ID) { // Fusion
 			obj->shields = 60 * F1_0; 
 		}
 	}
@@ -748,7 +748,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		vm_vector_2_matrix( &obj->orient,direction, &Objects[parent].orient.uvec ,NULL);
 
 	if (( &Objects[parent] != Viewer ) && (Objects[parent].type != OBJ_WEAPON) &&
-		(!is_observer() || !PlayerCfg.ObsHideEnergyWeaponMuzzle[get_observer_game_mode()] || weapon_type == VULCAN_ID || Weapon_info[weapon_type].damage_radius)) {
+		(!is_observer() || !PlayerCfg.ObsHideEnergyWeaponMuzzle[get_observer_game_mode()] || weapon_type == VULCAN_ID || weapon_type == GAUSS_ID || Weapon_info[weapon_type].damage_radius)) {
 		// Muzzle flash
 		if (Weapon_info[obj->id].flash_vclip > -1 )
 			object_create_muzzle_flash( obj->segnum, &obj->pos, Weapon_info[obj->id].flash_size, Weapon_info[obj->id].flash_vclip );
@@ -824,7 +824,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 		weapon_speed /= 2;
 
 	if( using_original_d1_weapons()) {
-		if(obj->id == 12) { // Spread
+		if(obj->id == SPREADFIRE_ID) { // Spread
 			weapon_speed = 200 * F1_0; 
 		} 
 	}
@@ -1280,7 +1280,7 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 
 	fix weapon_speed = Weapon_info[laser_type].speed[Difficulty_level];
 	if( using_original_d1_weapons()) {
-		if(laser_type == 12) { // Spread
+		if(laser_type == SPREADFIRE_ID) { // Spread
 			weapon_speed = 200 * F1_0; 
 		} 
 	}
@@ -1547,7 +1547,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 				speed = vm_vec_normalize_quick(&temp_vec);
 				max_speed = Weapon_info[obj->id].speed[Difficulty_level];
 				if( using_original_d1_weapons()) {
-					if(obj->id == 12) { // Spread
+					if(obj->id == SPREADFIRE_ID) { // Spread
 						max_speed = 200 * F1_0; 
 					} 
 				}
@@ -1630,7 +1630,7 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 
 		fix max_weapon_speed = Weapon_info[obj->id].speed[Difficulty_level];
 		if( using_original_d1_weapons()) {
-			if(obj->id == 12) { // Spread
+			if(obj->id == SPREADFIRE_ID) { // Spread
 				max_weapon_speed = 200 * F1_0; 
 			} 
 		}

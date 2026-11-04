@@ -675,6 +675,8 @@ int do_powerup(object *obj)
 				if (Players[Player_num].primary_weapon!=LASER_INDEX)
 			      check_to_use_primary (SUPER_LASER_INDEX);
 				used=1;
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status(); // observers need the new laser level, as for POW_LASER
 			}
 			if (!used && !(Game_mode & GM_MULTI) )
 				used = pick_up_energy();
@@ -694,6 +696,8 @@ int do_powerup(object *obj)
 				digi_play_sample( Powerup_info[obj->id].hit_sound, F1_0 );
 				powerup_basic(15, 0, 15, 0, "AMMO RACK!");
 				used=1;
+				if (Game_mode & GM_MULTI)
+					multi_send_ship_status(); // observers' ammo bar depends on this flag
 			}
 			break;
 
