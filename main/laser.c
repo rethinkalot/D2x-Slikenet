@@ -511,6 +511,8 @@ void omega_charge_frame(void)
 		Omega_charge += FrameTime/OMEGA_CHARGE_SCALE;
 		if (Omega_charge > MAX_OMEGA_CHARGE)
 			Omega_charge = MAX_OMEGA_CHARGE;
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status(); // observers show this charge; the send itself is rate limited
 
 		delta_charge = Omega_charge - old_omega_charge;
 
@@ -548,6 +550,8 @@ void do_omega_stuff(object *parent_objp, vms_vector *firing_pos, object *weapon_
 		Omega_charge -= OMEGA_BASE_TIME;
 		if (Omega_charge < 0)
 			Omega_charge = 0;
+		if (Game_mode & GM_MULTI)
+			multi_send_ship_status(); // observers show this charge; the send itself is rate limited
 
 		if (GameTime64 - Last_omega_fire_time + OMEGA_BASE_TIME <= FrameTime) // if firing is prolonged by FrameTime overhead, let's try to fix that. Since Next_laser_firing_time is probably changed already (in do_laser_firing_player), we need to calculate the overhead slightly different. 
 			fire_frame_overhead = GameTime64 - Last_omega_fire_time + OMEGA_BASE_TIME;

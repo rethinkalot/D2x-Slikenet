@@ -322,6 +322,11 @@ fix weapon_box_fade_values[2];
 int	Color_0_31_0 = -1;
 extern fix ThisLevelTime;
 extern fix Omega_charge;
+// The local player's charge, or the observed player's when observing (Omega_charge only tracks the local player)
+static fix omega_charge_for(int pnum)
+{
+	return (pnum == Player_num) ? Omega_charge : Multi_omega_charge[pnum];
+}
 extern fix Cruise_speed;
 extern int linedotscale;
 
@@ -1241,7 +1246,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 					sprintf(weapon_str,"P");break;
 				case 9:
 					if (PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
-						sprintf(weapon_str, "O%03i", Omega_charge * 100/MAX_OMEGA_CHARGE);
+						sprintf(weapon_str, "O%03i", omega_charge_for(pnum) * 100/MAX_OMEGA_CHARGE);
 					else
 						sprintf(weapon_str,"O");
 					break;
@@ -1367,7 +1372,7 @@ void hud_show_weapons(void)
 				disp_primary_weapon_name = weapon_name;
 				break;
 			case OMEGA_INDEX:
-				sprintf(weapon_str, "%s: %03i", weapon_name, Omega_charge * 100/MAX_OMEGA_CHARGE);
+				sprintf(weapon_str, "%s: %03i", weapon_name, omega_charge_for(pnum) * 100/MAX_OMEGA_CHARGE);
 				convert_1s(weapon_str);
 				disp_primary_weapon_name = weapon_str;
 				break;
@@ -2165,7 +2170,7 @@ void draw_weapon_boxes()
 
 			if (Players[pnum].primary_weapon == OMEGA_INDEX)
 			{
-				draw_primary_ammo_info(Omega_charge * 100/MAX_OMEGA_CHARGE);
+				draw_primary_ammo_info(omega_charge_for(pnum) * 100/MAX_OMEGA_CHARGE);
 			}
 		}
 	}

@@ -72,3 +72,24 @@ Builds clean and is deployed; not yet play-tested. Findings came from a read-onl
 - `max_numobservers` read from a preset is clamped to `MAX_OBSERVERS`.
 
 **Found, not changed** (see the reports): D1s `do_obs_menu` exits on "Switch Game Mode" and "Share Settings" because of `if (i < 0) break;`, and discards edits on ESC; D1s `multi.c:2217` is missing the `[mode]` index on `ObsChat`; D2 observers see a fixed Omega charge (the observed player's charge is not sent); the D2 energy-to-shield converter does not send ship status; D2 `ROBOT_TIMEOUT` and 60 Hz cadence are unchanged.
+
+## Follow-ups from the 2026-11-04 tests (D2s and D1s)
+
+Builds clean and deployed to both testbenches; not yet play-tested.
+
+- **Scores at leave** (footer and memlog) now print `score`, `kills` and `deaths`; Anarchy only counts kills. Same change in D1s.
+- **Bridge** (`slikenet_bridge.cpp`, identical in both repos): the fallback counter ignores addresses that are not lane peers (observers), an unanswered hello is resent at most once a second, a hello can't take over a player whose lane is still connected on another address, and a failed `Connect()` logs a red line.
+- **Handshake log**: "Requested update to address..." and "not updated" lines are only logged when the address really changes (they printed every second before). Both repos.
+- **Omega charge for observers (D2s)**: `MULTI_SHIP_STATUS` grew from 43 to 44 bytes (one byte of charge); `Multi_omega_charge[]` holds it per player, the three gauge spots use `omega_charge_for(pnum)`, and the owner sends status while charge changes (rate limited). `MULTI_PROTO_VERSION` was not bumped again (builds are not released).
+- **Memlog window (D2s)**: position samples are recorded for 10 seconds starting when a second player is in the game; capacity is 1024 per player (was 36). D1s still records continuously.
+- **D1s observer menu**: only ESC (-1) leaves the menu now, so Switch Game Mode and Share Settings work; `ObsChat` is indexed by game mode in `multi_do_obs_message`.
+- **ShortPackets** left as is in both repos (D2s sets it to 0 after the Advanced menu; D1s untouched), as decided.
+
+## Fixes from the 4-instance test (2026-11-04, D2s and D1s)
+
+- **Client-to-client lane never became ready**: `net_udp_slikenet_process_hello` checked `Netgame.players[pnum].connected`, which a client never sets for someone who joined after it did. It now checks `Players[pnum].connected`. Both repos.
+- `UPID_OBSQUIT` no longer logs "unknown packet type 30" (the host handles it earlier in `net_udp_process_packet`). Both repos.
+- gamelog timestamp file names used `tm_mon` without +1 (October in November). Both repos (`console.c`).
+- D2s: removed the leftover `robotinfo.txt` write on every robot send (`multibot.c`).
+- D2s: `net_udp_telemetry_record_fire` is now called from `multi_send_fire` and `multi_do_fire`, as in D1s, so the memlog fire-event counts work.
+- Host-start settings are written to `gamelog.txt` without `-debug` and to `memlog.txt` for every player who leaves (both repos).

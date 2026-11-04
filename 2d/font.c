@@ -961,7 +961,7 @@ void gr_remap_color_fonts()
 void gr_remap_mono_fonts()
 {
 	int fontnum;
-	con_printf (CON_DEBUG, "gr_remap_mono_fonts ()\n");
+	/* con_printf (CON_DEBUG, "gr_remap_mono_fonts ()\n"); */ // D1s doesn't print this either
 	for (fontnum=0;fontnum<MAX_OPEN_FONTS;fontnum++) {
 		grs_font *font;
 		font = open_font[fontnum].ptr;

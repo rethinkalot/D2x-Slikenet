@@ -457,7 +457,6 @@ multi_send_robot_position(int objnum, int force)
     robot_last_send_time[Objects[objnum].ctype.ai_info.REMOTE_SLOT_NUM] = GameTime64;
 
     robot_send_pending[Objects[objnum].ctype.ai_info.REMOTE_SLOT_NUM] = 1+force;
-{ FILE *rf=fopen("robotinfo.txt","a"); if(rf){ fputs("tx",rf); fputc(10,rf); fclose(rf);} }
 
     return;
 }
