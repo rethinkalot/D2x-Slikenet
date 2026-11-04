@@ -3308,8 +3308,12 @@ void newdemo_playback_one_frame()
 			newdemo_goto_beginning();
 			return;
 		}
-		if (Newdemo_vcr_state == ND_STATE_REWINDING)
-			frames_back = 10;
+		if (Newdemo_vcr_state == ND_STATE_REWINDING) {
+			// Scale step dynamically to provide rapid seeking regardless of high frame ceilings
+			int target_fps = PlayerCfg.maxFps > 0 ? PlayerCfg.maxFps : 60;
+			frames_back = (target_fps > 60) ? (target_fps / 3) : 10;
+			if (frames_back < 10) frames_back = 10;
+		}
 		else
 			frames_back = 1;
 		if (nd_playback_v_at_eof) {
@@ -3329,7 +3333,11 @@ void newdemo_playback_one_frame()
 	else if (Newdemo_vcr_state == ND_STATE_FASTFORWARD) {
 		if (!nd_playback_v_at_eof)
 		{
-			for (i = 0; i < 10; i++)
+			int target_fps = PlayerCfg.maxFps > 0 ? PlayerCfg.maxFps : 60;
+			int ff_steps = (target_fps > 60) ? (target_fps / 3) : 10;
+			if (ff_steps < 10) ff_steps = 10;
+
+			for (i = 0; i < ff_steps; i++)
 			{
 				if (newdemo_read_frame_information(0) == -1)
 				{

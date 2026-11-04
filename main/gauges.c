@@ -689,6 +689,9 @@ static inline void hud_bitblt (int x, int y, grs_bitmap *bm)
 
 int get_pnum_for_hud()
 {
+	// During playback the HUD follows the recorded view's player, as in D1s
+	if (Newdemo_state == ND_STATE_PLAYBACK && ConsoleObject && ConsoleObject->type == OBJ_PLAYER)
+		return ConsoleObject->id;
 	if (is_observer() && is_observing_player())
 		return Current_obs_player;
 	else

@@ -1048,10 +1048,29 @@ static int handle_observer_control_event(d_event *event)
 
 	if (action == OBSERVER_CONTROL_TOGGLE_MODE)
 	{
+		// Cycle camera, as in D1s: first person -> third person -> free -> first person
 		if (is_observing_player())
-			reset_obs();
+		{
+			if (Obs_at_distance == 0)
+			{
+				HUD_init_message_literal(HM_MULTI, "Observing third person.");
+				Obs_at_distance = 1;
+				last_drawn_cockpit = -1;
+				init_cockpit();
+			}
+			else
+			{
+				reset_obs();
+			}
+		}
 		else
+		{
 			cycle_observed_player(1, 0);
+			HUD_init_message_literal(HM_MULTI, "Observing first person.");
+			Obs_at_distance = 0;
+			last_drawn_cockpit = -1;
+			init_cockpit();
+		}
 		return 1;
 	}
 
@@ -1944,15 +1963,18 @@ int ReadControls(d_event *event)
 		// Force the observer to a certain camera based on whether they are freely observing or observing a specific player.
 		if (is_observing_player()) {
 			// We're observing a player directly, and need to interpolate the position and orientation.  Check to see if the real position has updated, and accumulate Last_real_update time.
-			if (vm_vec_equal(&Real_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
+			// Compare against the raw (un-offset) pose: in third person Real_pos carries the camera offset and would never match.
+			if (vm_vec_equal(&Real_raw_pos, &Objects[Players[Current_obs_player].objnum].pos) && vm_mat_equal(&Real_raw_orient, &Objects[Players[Current_obs_player].objnum].orient)) {
 				Last_real_update += FrameTime;
 			} else {
 
-				Real_pos = Objects[Players[Current_obs_player].objnum].pos;
-				Real_orient = Objects[Players[Current_obs_player].objnum].orient;
+				Real_raw_pos = Objects[Players[Current_obs_player].objnum].pos;
+				Real_raw_orient = Objects[Players[Current_obs_player].objnum].orient;
+				Real_pos = Real_raw_pos;
+				Real_orient = Real_raw_orient;
 				Last_real_update = 0;
 
-				// If we're observing at a distance, move the camera accordingly.achieved_state
+				// If we're observing at a distance, move the camera accordingly.
 				if (Obs_at_distance == 1) {
 					int dist = PlayerCfg.ObsIncreaseThirdPersonDist[get_observer_game_mode()] ? -30 : -20;
 					vms_vector move = ZERO_VECTOR;
@@ -1972,7 +1994,19 @@ int ReadControls(d_event *event)
 				ConsoleObject->orient = Real_orient;
 			} else {
 				// Determine how close we should get to the real position and orientation, and update the console object accordingly.
-				fix factor = fixdiv(FrameTime, (sample_time - Last_real_update));
+				fix factor;
+				fix remaining = sample_time - Last_real_update;
+				if (remaining <= 0) {
+					factor = F1_0;
+				} else {
+					factor = fixdiv(FrameTime, remaining);
+					if (factor > F1_0) {
+						factor = F1_0;
+					}
+					if (factor < 0) {
+						factor = 0;
+					}
+				}
 
 				vms_vector  fvec1, fvec2, rvec1, rvec2;
 				fix         mag1;

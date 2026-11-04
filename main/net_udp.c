@@ -52,6 +52,7 @@
 #include "config.h"
 #include "vers_id.h"
 #include "physfsx.h"
+#include "slikenet_bridge.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -537,6 +538,16 @@ static void net_udp_telemetry_log_summary(void)
         net_udp_fire_history_count, net_udp_fire_history_total,
         net_udp_fire_history_tx_total, net_udp_fire_history_rx_total,
         NET_TELEMETRY_FIRE_CAPACITY);
+#ifndef IPv6
+    {
+        unsigned int lane_port, peers_ready, lane_sent, lane_received, lane_fallback;
+
+        slikenet_get_stats(&lane_port, &peers_ready, &lane_sent, &lane_received, &lane_fallback);
+        PHYSFSX_printf(memlog,
+            "SLikeNet lane: port=%u peers-ready=%u sent=%u received=%u plain-UDP-while-not-ready=%u\n",
+            lane_port, peers_ready, lane_sent, lane_received, lane_fallback);
+    }
+#endif
     PHYSFS_close(memlog);
 }
 
@@ -592,33 +603,34 @@ static void net_udp_log_session_netinfo(void)
     else
         strcpy(max_time, "N/A");
 
-    con_printf(CON_NET_SESSION, "\n\033[32mSLikeNet Game Info (session snapshot)\033[0m\n");
-    con_printf(CON_NET_SESSION, "\033[32mInfo captured: %s | Game: %s | Mission: %s (%s) | Level: %d\033[0m\n",
+    con_printf(CON_NET_STATUS, "\n\033[32mSLikeNet Host-Start Netgame Snapshot (debug footer)\033[0m\n");
+    con_printf(CON_NET_STATUS, "\033[32mStart time: %s | Game: %s | Mission: %s (%s) | Level: %d\033[0m\n",
         net_udp_session_capture_timestamp, g->game_name, g->mission_title, g->mission_name, g->levelnum);
-    con_printf(CON_NET_SESSION, "\033[32mMode: %s | Players at capture: %u/%u | Difficulty: %s | Version: %s\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mMode: %s | Players at start: %u/%u | Difficulty: %s | Version: %s\033[0m\n",
         mode, g->numplayers, g->max_numplayers, MENU_DIFFICULTY_TEXT(g->difficulty), RH_VERSION);
-    con_printf(CON_NET_SESSION, "\033[32mJoinable: %s | Show on minimap: %s | Status: Playing at capture\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mJoinable: %s | Show on minimap: %s | Status: Playing at capture\033[0m\n",
         joinable, (g->game_flags & NETGAME_FLAG_SHOW_MAP) ? "Yes" : "No");
-    con_printf(CON_NET_SESSION, "\033[32mReactor life: %d min | Max time: %s | Kill goal: %d | Spawn: %s\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mReactor life: %d min | Max time: %s | Kill goal: %d | Spawn: %s\033[0m\n",
         g->control_invul_time / (F1_0 * 60), max_time, g->KillGoal * 10, spawn);
-    con_printf(CON_NET_SESSION, "\033[32mPPS: %d | Short packets: %s | Retro protocol: %s | Bright ships: %s\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mPPS: %d | Short packets: %s | Retro protocol: %s | Bright ships: %s\033[0m\n",
         g->PacketsPerSec, g->ShortPackets ? "Yes" : "No", g->RetroProtocol ? "Yes" : "No", g->BrightPlayers ? "Yes" : "No");
-    con_printf(CON_NET_SESSION, "\033[32mPrimary multiplier: %ux | Secondary multiplier: %ux | Secondary cap: %s | Low Vulcan: %s\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mPrimary multiplier: %ux | Secondary multiplier: %ux | Secondary cap: %s | Low Vulcan: %s\033[0m\n",
         g->PrimaryDupFactor ? g->PrimaryDupFactor : 1,
         g->SecondaryDupFactor ? g->SecondaryDupFactor : 1,
         g->SecondaryCapFactor == 0 ? "Uncapped" : (g->SecondaryCapFactor == 1 ? "Max Six" : "Max Two"),
         g->LowVulcan ? "Yes" : "No");
-    con_printf(CON_NET_SESSION, "\033[32mCustom colors: %s | Custom models/textures: %s | Homing rate: %u | Confirmed sparks: %s\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mCustom colors: %s | Custom models/textures: %s | Homing rate: %u | Confirmed sparks: %s\033[0m\n",
         g->AllowPreferredColors ? "Yes" : "No", g->AllowCustomModelsTextures ? "Yes" : "No", g->HomingUpdateRate, g->RemoteHitSpark ? "Yes" : "No");
-    con_printf(CON_NET_SESSION, "\033[32mReduced flash: %s | Gauss ammo: %s | Allowed-items mask: 0x%08lx\033[0m\n",
+    con_printf(CON_NET_STATUS, "\033[32mReduced flash: %s | Gauss ammo: %s | Allowed-items mask: 0x%08lx\033[0m\n",
         g->ReducedFlash ? "Yes" : "No", gauss, (unsigned long)g->AllowedItems);
+    con_printf(CON_NET_STATUS, "\033[32mThis footer contains only the captured host-start settings; no end-game values.\033[0m\n");
     if (net_udp_leave_snapshot_valid)
     {
-        con_printf(CON_NET_SESSION, "\n\033[32mPlayer scores at leave (%s):\033[0m\n",
+        con_printf(CON_NET_STATUS, "\n\033[32mPlayer scores at leave (%s):\033[0m\n",
             net_udp_leave_timestamp);
         for (unsigned int i = 0; i < MAX_PLAYERS; i++)
             if (net_udp_leave_callsigns[i][0])
-                con_printf(CON_NET_SESSION, "\033[32m  %s: %d\033[0m\n",
+                con_printf(CON_NET_STATUS, "\033[32m  %s: %d\033[0m\n",
                     net_udp_leave_callsigns[i], net_udp_leave_scores[i]);
     }
 }
@@ -2930,6 +2942,11 @@ int net_udp_process_game_info(ubyte *data, int data_len, struct _sockaddr game_a
             Netgame.player_flags[i] = data[len];					len++;
         }
         Netgame.PacketsPerSec = GET_INTEL_SHORT(&(data[len]));				len += 2;
+        // Same limits as the host's menu; a bad value from the wire would divide by zero in the send timers
+        if (Netgame.PacketsPerSec < 10)
+            Netgame.PacketsPerSec = 10;
+        else if (Netgame.PacketsPerSec > 90)
+            Netgame.PacketsPerSec = 90;
         Netgame.ShortPackets = data[len];						len++;
         Netgame.PacketLossPrevention = data[len];					len++;
         Netgame.NoFriendlyFire = data[len];						len++;
@@ -3734,23 +3751,97 @@ void net_udp_leave_game()
     net_udp_leave_snapshot_valid = 0;
 }
 
+#ifndef IPv6
+static void net_udp_slikenet_listen(int process);
+#endif
+
 void net_udp_flush()
 {
     ubyte packet[UPID_MAX_SIZE];
-    struct _sockaddr sender_addr; 
+    struct _sockaddr sender_addr;
 
     if (UDP_Socket[0] != -1)
         while (udp_receive_packet( 0, packet, UPID_MAX_SIZE, &sender_addr) > 0);
 
     if (UDP_Socket[1] != -1)
         while (udp_receive_packet( 1, packet, UPID_MAX_SIZE, &sender_addr) > 0);
+
+#ifndef IPv6
+    net_udp_slikenet_listen(0);
+#endif
 }
+
+#ifndef IPv6
+#define SLIKENET_HELLO_SIZE 5 // token, player number
+
+// Each player connects to the lower-numbered players, so a joiner behind NAT dials out to the host.
+static void net_udp_slikenet_frame()
+{
+    static fix64 last_time = 0;
+    fix64 time = timer_query();
+    ubyte hello[SLIKENET_HELLO_SIZE];
+    int i;
+
+    if (Network_status != NETSTAT_PLAYING && Network_status != NETSTAT_ENDLEVEL)
+        return;
+    // Riding the same cadence as net_udp_send_pdata() (the game's own
+    // configured network rate) instead of a separate hardcoded interval;
+    // slikenet_connect_peer() is cheap once a peer is ready, and its own
+    // per-peer timer (not this one) throttles actual connect attempts.
+    if (is_observer() || (time >= last_time && time < last_time + F1_0/Netgame.PacketsPerSec))
+        return;
+    last_time = time;
+
+    PUT_INTEL_INT(hello, netgame_token);
+    hello[4] = Player_num;
+    for (i = 0; i < Player_num; i++)
+        if (Netgame.players[i].connected && Netgame.players[i].protocol.udp.addr.sin_port != 0)
+            slikenet_connect_peer(&Netgame.players[i].protocol.udp.addr, sizeof(struct _sockaddr), hello, sizeof(hello));
+}
+
+static void net_udp_slikenet_process_hello(ubyte *data, int size)
+{
+    int pnum;
+
+    if (size != SLIKENET_HELLO_SIZE || (uint)GET_INTEL_INT(data) != netgame_token)
+        return;
+    pnum = data[4];
+    if (pnum >= MAX_PLAYERS || pnum == Player_num || !Netgame.players[pnum].connected)
+        return;
+    slikenet_accept_hello(&Netgame.players[pnum].protocol.udp.addr, sizeof(struct _sockaddr));
+}
+
+static void net_udp_slikenet_listen(int process)
+{
+    ubyte packet[UPID_MAX_SIZE];
+    struct _sockaddr sender_addr;
+    int size, type;
+
+    while ((size = slikenet_receive(packet, UPID_MAX_SIZE, &sender_addr, sizeof(struct _sockaddr), &type)) > 0)
+    {
+        if (type == SLIKENET_PACKET_DATA)
+            udp_count_received(size); // same [RX] telemetry as plain UDP
+        if (!process)
+            continue;
+        if (type == SLIKENET_PACKET_DATA)
+            net_udp_process_packet(packet, sender_addr, size, 0);
+        else if (type == SLIKENET_PACKET_HELLO)
+            net_udp_slikenet_process_hello(packet, size);
+    }
+    if (process)
+        net_udp_slikenet_frame();
+}
+#endif
 
 void net_udp_listen()
 {
     int size;
     ubyte packet[UPID_MAX_SIZE];
     struct _sockaddr sender_addr;
+
+#ifndef IPv6
+    net_udp_slikenet_listen(1);
+#endif
 
     if (UDP_Socket[0] != -1)
     {
@@ -3910,7 +4001,11 @@ void net_udp_do_frame(int force, int listen)
      // Send positional update either in the regular PPS interval OR if forced AND at least every 66.6ms (nice for firing)
     if ((force && time >= (last_pdata_time+(F1_0/(Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90)))) || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
     {
-        last_pdata_time = time;
+        // Step by the exact interval so time past the mark carries over and the average holds PacketsPerSec
+        if (!force && time < last_pdata_time+(2*(F1_0/Netgame.PacketsPerSec)))
+            last_pdata_time += F1_0/Netgame.PacketsPerSec;
+        else
+            last_pdata_time = time;
         net_udp_send_pdata();
     }
     
@@ -4570,7 +4665,7 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
     // Add needack packet and check for possible redundancy
     if (needack)
     {
-        if (!net_udp_noloss_validate_mdata(GET_INTEL_SHORT(&data[6]), pnum, sender_addr))
+        if (!net_udp_noloss_validate_mdata(GET_INTEL_INT(&data[6]), pnum, sender_addr))
             return;
     }
 
@@ -4595,7 +4690,7 @@ void net_udp_process_mdata (ubyte *data, int data_len, struct _sockaddr sender_a
 
             if (needack && N_players > 2)
             {
-                net_udp_noloss_add_queue_pkt(GET_INTEL_SHORT(&data[6]), timer_query(), data+dataoffset, data_len-dataoffset, pnum, pack);
+                net_udp_noloss_add_queue_pkt(GET_INTEL_INT(&data[6]), timer_query(), data+dataoffset, data_len-dataoffset, pnum, pack);
             }
         }
     }

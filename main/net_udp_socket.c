@@ -4,6 +4,7 @@
 #include "net_udp_socket.h"
 #include "net_udp.h"
 #include "timer.h"
+#include "slikenet_bridge.h"
 
 int UDP_Socket[3] = { -1, -1, -1 };
 
@@ -19,10 +20,56 @@ static unsigned int UDP_pdata_tx_updates = 0, UDP_pdata_rx_updates = 0;
 static fix64 last_packet_tx_log_time = 0, last_packet_rx_log_time = 0;
 static int packet_tx_logged = 0, packet_rx_logged = 0;
 
+#ifndef IPv6
+// Whitelist of the 4 packet IDs routed over SLikeNet, pinned to this header's
+// actual numeric values so a future net_udp.h change, or a script/handoff
+// written against stale numbers, can't silently shift this mapping.
+#if UPID_PDATA != 16 || UPID_OBJECT_DATA != 11 || UPID_MDATA_PNORM != 17 || UPID_MDATA_PNEEDACK != 18
+#error "SLikeNet whitelist in udp_send_slikenet() no longer matches net_udp.h's UPID_* values; update both together."
+#endif
+
+// Only core gameplay telemetry and combat actions go over the high-speed
+// SLikeNet lane; native DXX plain UDP still carries everything else, so
+// lobby state (sync, discovery, join, tracker) and secondary traffic
+// (observers, ping, end-level) are unaffected by this lane's connect state.
+static int udp_send_slikenet(int sockfd, const void *msg, int len, const struct sockaddr *to, socklen_t tolen)
+{
+	int mode;
+
+	if (sockfd != UDP_Socket[0] || len <= 0)
+		return -1;
+
+	switch (((const ubyte *)msg)[0])
+	{
+		case UPID_PDATA: // = 16: live ship position/velocity/orientation
+			mode = SLIKENET_SEQUENCED; // only the newest matters
+			break;
+		case UPID_OBJECT_DATA: // = 11: object sync for a joining player
+			mode = SLIKENET_RELIABLE_ORDERED; // joiners usually aren't connected yet, so this normally falls back to plain UDP
+			break;
+		case UPID_MDATA_PNORM: // = 17: multi buffer, priority 0-1, no ACK
+			mode = SLIKENET_UNRELIABLE; // same delivery as plain UDP: a lost packet is not resent
+			break;
+		case UPID_MDATA_PNEEDACK: // = 18: multi buffer, priority 2, ACKed
+			mode = SLIKENET_RELIABLE; // the game's ACK layer still runs; net_udp_noloss_validate_mdata() drops duplicates
+			break;
+		default:
+			return -1;
+	}
+	return slikenet_send_to_peer(to, (int)tolen, msg, len, mode);
+}
+#endif
+
 ssize_t dxx_sendto(int sockfd, const void *msg, int len, unsigned int flags,
 	const struct sockaddr *to, socklen_t tolen)
 {
-	ssize_t result = sendto(sockfd, msg, len, flags, to, tolen);
+	ssize_t result;
+
+#ifndef IPv6
+	result = udp_send_slikenet(sockfd, msg, len, to, tolen);
+	if (result < 0)
+#endif
+	result = sendto(sockfd, msg, len, flags, to, tolen);
 	if (result >= 0)
 	{
 		fix64 now = timer_query();
@@ -42,26 +89,31 @@ ssize_t dxx_sendto(int sockfd, const void *msg, int len, unsigned int flags,
 	return result;
 }
 
+/* Counts one received packet and feeds the [RX] line. Plain UDP and the
+ * SLikeNet lane both call this, so either lane shows up in the same telemetry. */
+void udp_count_received(int size)
+{
+	fix64 now = timer_query();
+
+	UDP_num_recvfrom++;
+	UDP_len_recvfrom += (unsigned int)size;
+	if (!packet_rx_logged || now < last_packet_rx_log_time ||
+		now - last_packet_rx_log_time >= PACKET_LOG_INTERVAL)
+	{
+		con_printf(CON_NET_RX,
+			"\033[34m[RX] SLikeNet Packet IN: Received %d Bytes Traffic\033[0m\n",
+			size);
+		last_packet_rx_log_time = now;
+		packet_rx_logged = 1;
+	}
+}
+
 ssize_t dxx_recvfrom(int sockfd, void *buf, int len, unsigned int flags,
 	struct sockaddr *from, socklen_t *fromlen)
 {
 	ssize_t result = recvfrom(sockfd, buf, len, flags, from, fromlen);
 	if (result > 0)
-	{
-		fix64 now = timer_query();
-
-		UDP_num_recvfrom++;
-		UDP_len_recvfrom += (unsigned int)result;
-		if (!packet_rx_logged || now < last_packet_rx_log_time ||
-			now - last_packet_rx_log_time >= PACKET_LOG_INTERVAL)
-		{
-			con_printf(CON_NET_RX,
-				"\033[34m[RX] SLikeNet Packet IN: Received %d Bytes Traffic\033[0m\n",
-				(int)result);
-			last_packet_rx_log_time = now;
-			packet_rx_logged = 1;
-		}
-	}
+		udp_count_received((int)result);
 	return result;
 }
 
@@ -179,6 +231,10 @@ void udp_close_socket(int socknum)
 
 	if (UDP_Socket[socknum] != -1)
 	{
+#ifndef IPv6
+		if (socknum == 0)
+			slikenet_shutdown();
+#endif
 #ifdef _WIN32
 		closesocket(UDP_Socket[socknum]);
 #else
@@ -229,6 +285,10 @@ int udp_open_socket(int socknum, int port)
 	con_printf(CON_NET_STATUS,
 		"\033[32mSLikeNet is ACTIVE on %s:%d\033[0m\n",
 		udp_local_addr_string(), port);
+#ifndef IPv6
+	if (socknum == 0)
+		slikenet_startup((unsigned short)port); // on failure the game stays on plain UDP
+#endif
 	return 0;
 }
 

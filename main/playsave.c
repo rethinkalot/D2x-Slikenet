@@ -1310,8 +1310,11 @@ int read_netgame_settings_file(const char *filename, netgame_info *ng, int no_na
 				ng->difficulty = strtol(value, NULL, 10);
 			else if (!strcmp(token, "max_numplayers"))
 				ng->max_numplayers = strtol(value, NULL, 10);
-			else if (!strcmp(token, "max_numobservers"))
+			else if (!strcmp(token, "max_numobservers")) {
 				ng->max_numobservers = strtol(value, NULL, 10);
+				if (ng->max_numobservers > MAX_OBSERVERS)
+					ng->max_numobservers = MAX_OBSERVERS; // a bad preset would overrun observers[] and multibuf
+			}
 			else if (!strcmp(token, "game_flags"))
 				ng->game_flags = strtol(value, NULL, 10);
 			else if (!strcmp(token, "AllowedItems"))

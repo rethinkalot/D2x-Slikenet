@@ -20,6 +20,7 @@ ssize_t dxx_sendto(int sockfd, const void *msg, int len, unsigned int flags,
 ssize_t dxx_recvfrom(int sockfd, void *buf, int len, unsigned int flags,
 	struct sockaddr *from, socklen_t *fromlen);
 void udp_traffic_stat(void);
+void udp_count_received(int size);
 void udp_record_pdata_tx(void);
 void udp_record_pdata_rx(void);
 int udp_dns_filladdr(char *host, int port, struct _sockaddr *sAddr);
