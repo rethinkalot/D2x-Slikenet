@@ -2178,6 +2178,16 @@ multi_do_fire(const ubyte *buf)
 
     Assert (pnum < N_players);
 
+#ifdef USE_UDP
+    if (pnum >= 0 && pnum < N_players && Players[(int)pnum].objnum >= 0)
+    {
+        const vms_vector *ship_pos = &Objects[Players[(int)pnum].objnum].pos;
+        net_udp_telemetry_record_fire(pnum, weapon, 1,
+            ship_pos->x, ship_pos->y, ship_pos->z,
+            shot_orientation.x, shot_orientation.y, shot_orientation.z);
+    }
+#endif
+
     if (Objects[Players[(int)pnum].objnum].type == OBJ_GHOST)
         multi_make_ghost_player(pnum);
 
@@ -3566,6 +3576,11 @@ void multi_send_fire(int laser_gun, int laser_level, int laser_flags, int laser_
     PUT_INTEL_INT(multibuf+8 , ownship->orient.fvec.x);
     PUT_INTEL_INT(multibuf+12, ownship->orient.fvec.y);
     PUT_INTEL_INT(multibuf+16, ownship->orient.fvec.z);
+#ifdef USE_UDP
+    net_udp_telemetry_record_fire(Player_num, laser_gun, 0,
+        ownship->pos.x, ownship->pos.y, ownship->pos.z,
+        ownship->orient.fvec.x, ownship->orient.fvec.y, ownship->orient.fvec.z);
+#endif
 
     //multi_send_data(multibuf, 8, 1);
     multi_send_data(multibuf, 20, 2); // priority 2: reliable, shots must not drop
@@ -4624,6 +4639,9 @@ void multi_prep_level(void)
     int     cloak_count, inv_count;
 
     Show_graph_until = -1;
+
+    for (i = 0; i < MAX_PLAYERS; i++)
+        Multi_omega_charge[i] = MAX_OMEGA_CHARGE; // full until an observer receives a ship status
 
     Assert(Game_mode & GM_MULTI);
 
@@ -6543,9 +6561,13 @@ void multi_send_ship_status_for_frame()
     PUT_INTEL_INT(multibuf + 31, Players[Player_num].energy);
     PUT_INTEL_INT(multibuf + 35, Players[Player_num].homing_object_dist);
     PUT_INTEL_INT(multibuf + 39, Players[Player_num].afterburner_charge);
+    // Omega charge is a fix up to MAX_OMEGA_CHARGE; a byte is plenty for the observer's gauge
+    multibuf[43] = (ubyte)(Omega_charge * 255 / MAX_OMEGA_CHARGE);
 
-    multi_send_data_direct( multibuf, 43, multi_who_is_master(), 2);
+    multi_send_data_direct( multibuf, 44, multi_who_is_master(), 2);
 }
+
+fix Multi_omega_charge[MAX_PLAYERS]; // Other players' Omega charge as an observer sees it; Omega_charge is only the local player's
 
 void multi_do_ship_status( const ubyte *buf )
 {
@@ -6571,6 +6593,7 @@ void multi_do_ship_status( const ubyte *buf )
         Players[buf[1]].energy = GET_INTEL_INT(buf + 31);
         Players[buf[1]].homing_object_dist = GET_INTEL_INT(buf + 35);
         Players[buf[1]].afterburner_charge = GET_INTEL_INT(buf + 39);
+        Multi_omega_charge[buf[1]] = (fix)buf[43] * MAX_OMEGA_CHARGE / 255;
     }
 }
 
