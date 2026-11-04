@@ -253,6 +253,7 @@ int udp_open_socket(int socknum, int port)
 	struct addrinfo *result = NULL;
 	char service[16];
 	int broadcast = 1;
+	int reuse = 1;
 
 	if (socknum < 0 || socknum >= 3 || port <= 0 || port > 65535)
 		return -1;
@@ -261,6 +262,8 @@ int udp_open_socket(int socknum, int port)
 	UDP_Socket[socknum] = socket(_af, SOCK_DGRAM, 0);
 	if (UDP_Socket[socknum] < 0)
 		return -1;
+
+	setsockopt(UDP_Socket[socknum], SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse));
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_flags = AI_PASSIVE;
