@@ -734,55 +734,36 @@ void multi_do_robot_position(const ubyte *buf){
     }
 #ifndef WORDS_BIGENDIAN
     {
-        vms_vector client_pos = Objects[botnum].pos;
-        vms_matrix client_orient = Objects[botnum].orient;
-        
+        // extract_shortpos only asserts on the packet's segment (short at offset 15), so check it first
+        short packet_seg = GET_INTEL_SHORT(buf + loc + 15);
+        if (packet_seg < 0 || packet_seg > Highest_segment_index)
+            return;
+
         if (Objects[botnum].ctype.ai_info.REMOTE_OWNER != Player_num)
         {
+            // Another player owns this robot, so only its packets move it (same recipe as D1s): no local drift,
+            // no self-levelling or roll banking fighting the packet. A robot in its death roll keeps its local tumble.
+            if (Objects[botnum].ctype.ai_info.dying_start_time)
+                return;
+
             Objects[botnum].mtype.phys_info.velocity.x = 0;
             Objects[botnum].mtype.phys_info.velocity.y = 0;
             Objects[botnum].mtype.phys_info.velocity.z = 0;
+            // leftover thrust or spin from when this robot was ours would keep moving it between packets (physics only skips when thrust is zero too)
+            vm_vec_zero(&Objects[botnum].mtype.phys_info.thrust);
+            vm_vec_zero(&Objects[botnum].mtype.phys_info.rotvel);
+            Objects[botnum].mtype.phys_info.flags &= ~(PF_LEVELLING | PF_TURNROLL);
         }
 
         extract_shortpos(&Objects[botnum], (shortpos *)(buf+loc), 0);
-        
+
         if (Objects[botnum].ctype.ai_info.REMOTE_OWNER != Player_num)
         {
-            vms_vector pos_error;
-            vm_vec_sub(&pos_error, &Objects[botnum].pos, &client_pos);
-            
-            if (vm_vec_mag_quick(&pos_error) > F1_0 * 15) {
-                update_object_seg(&Objects[botnum]);
-            } else {
-                vms_matrix target_orient = Objects[botnum].orient;
-                Objects[botnum].pos = client_pos;
-                
-                // Slikenet: Guard matrix integrity during extreme cross-quadrant transitions behind objects
-                fix dot_check = vm_vec_dot(&client_orient.fvec, &target_orient.fvec);
-                int blend_shift = (dot_check < -F1_0 / 2) ? 1 : 2; // Accelerate tracking convergence on inversion thresholds
-
-                Objects[botnum].orient.fvec.x = client_orient.fvec.x + ((target_orient.fvec.x - client_orient.fvec.x) >> blend_shift);
-                Objects[botnum].orient.fvec.y = client_orient.fvec.y + ((target_orient.fvec.y - client_orient.fvec.y) >> blend_shift);
-                Objects[botnum].orient.fvec.z = client_orient.fvec.z + ((target_orient.fvec.z - client_orient.fvec.z) >> blend_shift);
-                
-                Objects[botnum].orient.uvec.x = client_orient.uvec.x + ((target_orient.uvec.x - client_orient.uvec.x) >> blend_shift);
-                Objects[botnum].orient.uvec.y = client_orient.uvec.y + ((target_orient.uvec.y - client_orient.uvec.y) >> blend_shift);
-                Objects[botnum].orient.uvec.z = client_orient.uvec.z + ((target_orient.uvec.z - client_orient.uvec.z) >> blend_shift);
-                
-                Objects[botnum].orient.rvec.x = client_orient.rvec.x + ((target_orient.rvec.x - client_orient.rvec.x) >> blend_shift);
-                Objects[botnum].orient.rvec.y = client_orient.rvec.y + ((target_orient.rvec.y - client_orient.rvec.y) >> blend_shift);
-                Objects[botnum].orient.rvec.z = client_orient.rvec.z + ((target_orient.rvec.z - client_orient.rvec.z) >> blend_shift);
-                
-                vm_vec_normalize_quick(&Objects[botnum].orient.fvec);
-                vm_vec_normalize_quick(&Objects[botnum].orient.uvec);
-                vm_vec_normalize_quick(&Objects[botnum].orient.rvec);
-
-                Objects[botnum].mtype.phys_info.velocity.x = (pos_error.x * 4);
-                Objects[botnum].mtype.phys_info.velocity.y = (pos_error.y * 4);
-                Objects[botnum].mtype.phys_info.velocity.z = (pos_error.z * 4);
-                
-                update_object_seg(&Objects[botnum]);
-            }
+            // Rebuild a square orthogonal matrix from the packet's look and up vectors
+            vms_vector fvec = Objects[botnum].orient.fvec;
+            vms_vector uvec = Objects[botnum].orient.uvec;
+            vm_vector_2_matrix(&Objects[botnum].orient, &fvec, &uvec, NULL);
+            update_object_seg(&Objects[botnum]);
         }
     }
 #else

@@ -4005,7 +4005,7 @@ void net_udp_player_spawned(int player_num)
 void net_udp_do_frame(int force, int listen)
 {
     fix64 time = 0;
-    static fix64 last_pdata_time = 0, last_mdata_time = 16, last_endlevel_time = 32, last_bcast_time = 48, last_resync_time = 64;
+    static fix64 last_pdata_time = 0, last_mdata_time = 16, last_endlevel_time = 32, last_bcast_time = 48, last_resync_time = 64, last_robot_time = 80;
 
     if (!(Game_mode&GM_NETWORK) || UDP_Socket[0] == -1)
         return;
@@ -4058,10 +4058,16 @@ void net_udp_do_frame(int force, int listen)
         net_udp_send_pdata();
     }
     
+    // Robot positions go out at 20Hz like D1s; the shared message buffer (guided missile steering etc.) keeps its 60Hz flush
+    if (force || (time >= (last_robot_time+(F1_0/20))))
+    {
+        last_robot_time = time;
+        multi_send_robot_frame(0);
+    }
+
     if (force || (time >= (last_mdata_time+(F1_0/60))))
     {
         last_mdata_time = time;
-        multi_send_robot_frame(0);
         net_udp_send_mdata(0, time);
     }
 

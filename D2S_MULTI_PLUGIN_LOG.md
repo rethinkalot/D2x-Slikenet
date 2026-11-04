@@ -93,3 +93,7 @@ Builds clean and deployed to both testbenches; not yet play-tested.
 - D2s: removed the leftover `robotinfo.txt` write on every robot send (`multibot.c`).
 - D2s: `net_udp_telemetry_record_fire` is now called from `multi_send_fire` and `multi_do_fire`, as in D1s, so the memlog fire-event counts work.
 - Host-start settings are written to `gamelog.txt` without `-debug` and to `memlog.txt` for every player who leaves (both repos).
+
+## Robot movement, Stage 1 (2026-11-04, D2s)
+
+Robot/mdata send cadence is now 20 Hz like D1s (`net_udp_do_frame`). `multi_do_robot_position` (non-owner branch) now follows D1s' receive recipe: validate the packet segment, zero velocity, clear `PF_LEVELLING | PF_TURNROLL`, `extract_shortpos`, rebuild the orientation with `vm_vector_2_matrix`, `update_object_seg`; no position restore or velocity servo. A robot in its death roll (`ai_info.dying_start_time`) ignores position packets so its local tumble finishes. `do_ai_frame` and `do_physics_sim` are deliberately unchanged: D1s' early returns would stop remote robots dying, firing at the local player and uncloaking in D2s. Stage 2 (cache + per-frame ease/dead reckoning) is planned after RETHINK's tests. Not yet play-tested.
