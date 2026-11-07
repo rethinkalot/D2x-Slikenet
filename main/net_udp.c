@@ -4509,6 +4509,7 @@ void net_udp_noloss_process_queue(fix64 time)
         // Check if we can remove that packet due to to it had no resend's or Timeout
         if (needack==0 || (UDP_mdata_queue[queuec].pkt_initial_timestamp + UDP_TIMEOUT <= time))
         {
+            /* Disabled on purpose: never drop or kick anyone for not acknowledging (paused or inactive players must stay).
             if (needack) // packet timed out but still not all have ack'd. SCREW THEM NOW!
             {
                 if (multi_i_am_master())
@@ -4532,6 +4533,7 @@ void net_udp_noloss_process_queue(fix64 time)
                     multi_reset_stuff();
                 }
             }
+            */
             memset(&UDP_mdata_queue[queuec],0,sizeof(UDP_mdata_store));
         }
 
@@ -4583,6 +4585,7 @@ void net_udp_noloss_process_queue(fix64 time)
         // Check if we can remove that packet due to to it had no resend's or Timeout
         if (needack==0 || (UDP_mdata_obs_queue[queuec].pkt_initial_timestamp + UDP_TIMEOUT <= time))
         {
+            /* Disabled on purpose: never drop or kick anyone for not acknowledging (paused or inactive players must stay).
             if (needack) // packet timed out but still not all have ack'd. SCREW THEM NOW!
             {
                 if (multi_i_am_master())
@@ -4606,6 +4609,7 @@ void net_udp_noloss_process_queue(fix64 time)
                     multi_reset_stuff();
                 }
             }
+            */
             memset(&UDP_mdata_obs_queue[queuec],0,sizeof(UDP_mdata_obs_store));
         }
 
