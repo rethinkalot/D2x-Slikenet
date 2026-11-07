@@ -1447,10 +1447,9 @@ void multi_do_frame(void)
 
     multi_do_protocol_frame(0, 1);
 
-    // Remote ships are drawn at the newest packet and moved on by physics between packets, as in D1s.
-    // multi_interp_update_remote() (delayed smoothing) is left off: it rewrites obj->pos every frame, which
-    // made ships hold and snap on late packets and kept resetting the observer camera's update timer.
-    // multi_interp_push_position() still records history, so it can be switched back on here.
+    // Draw remote ships at the smoothed (delayed) position, now that this
+    // frame's position updates have been read.
+    multi_interp_update_remote();
 
     if (multi_quit_game)
     {

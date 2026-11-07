@@ -144,6 +144,7 @@ void game_init_render_sub_buffers(int x, int y, int w, int h);
 extern void multi_check_for_killgoal_winner();
 
 extern int ReadControls(d_event *event);		// located in gamecntl.c
+extern void observer_camera_update(void);		// located in gamecntl.c
 extern void do_final_boss_frame(void);
 
 
@@ -1369,6 +1370,9 @@ int game_handler(window *wind, d_event *event, void *data)
 				GameProcessFrame();
 			}
 
+			// After this frame's network and object updates, so the camera and the observed ship share one position
+			observer_camera_update();
+
 			if (!Automap_active)		// efficiency hack
 			{
 				if (force_cockpit_redraw) {			//screen need redrawing?
@@ -1611,6 +1615,11 @@ void GameProcessFrame(void)
 		Players[Player_num].homing_object_dist = -1;		//	Assume not being tracked.  Laser_do_weapon_sequence modifies this.
 
 		object_move_all();
+#ifdef NETWORK
+		// Physics just moved remote ships on by their last packet's velocity; put them back on the smoothed position
+		if (Game_mode & GM_MULTI)
+			multi_interp_update_remote();
+#endif
 		powerup_grab_cheat_all();
 
 		if (Endlevel_sequence)	//might have been started during move
