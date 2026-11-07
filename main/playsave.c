@@ -199,6 +199,7 @@ int new_player_config()
 		PlayerCfg.ObsHideEnergyWeaponMuzzle[obs_mode] = 0;
 	}
 	PlayerCfg.NoChatSound = 0;
+	PlayerCfg.ShowObsMessages = 1;
 	PlayerCfg.ClassicAutoselectWeapon = 0;
 	PlayerCfg.OriginalD1Weapons = 0;
 
@@ -479,6 +480,8 @@ int read_player_d2x(char *filename)
 				}
 				if(!strcmp(word,"NOCHATSOUND"))
 					PlayerCfg.NoChatSound = atoi(line);
+				if(!strcmp(word,"SHOWOBSMESSAGES"))
+					PlayerCfg.ShowObsMessages = atoi(line);
 				if(!strcmp(word,"CLASSICAUTOSELECTWEAPON"))
 					PlayerCfg.ClassicAutoselectWeapon = atoi(line);
 				if(!strcmp(word,"ORIGINALD1WEAPONS"))
@@ -756,6 +759,7 @@ int write_player_d2x(char *filename)
 		//PHYSFSX_printf(fout,"quietplasma=%i\n",PlayerCfg.QuietPlasma);	
 		PHYSFSX_printf(fout,"maxfps=%i\n",PlayerCfg.maxFps);	
 		PHYSFSX_printf(fout,"nochatsound=%i\n",PlayerCfg.NoChatSound);
+		PHYSFSX_printf(fout,"showobsmessages=%i\n",PlayerCfg.ShowObsMessages);
 		PHYSFSX_printf(fout,"classicautoselectweapon=%i\n",PlayerCfg.ClassicAutoselectWeapon);
 		PHYSFSX_printf(fout,"originald1weapons=%i\n",PlayerCfg.OriginalD1Weapons);
 		PHYSFSX_printf(fout,"[end]\n");

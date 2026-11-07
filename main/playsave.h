@@ -132,6 +132,7 @@ typedef struct player_config
 	ubyte ObsIncreaseThirdPersonDist[NUM_OBS_MODES];
 	ubyte ObsHideEnergyWeaponMuzzle[NUM_OBS_MODES];
 	ubyte NoChatSound;
+	ubyte ShowObsMessages;
 	ubyte ClassicAutoselectWeapon;
 	ubyte AutoselectOnlyOnce;
 	ubyte OriginalD1Weapons;
