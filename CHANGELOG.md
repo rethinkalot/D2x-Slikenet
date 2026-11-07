@@ -28,6 +28,8 @@ Everything since the clean baseline (tag `D2-SlikeNet-clean-baseline`, 2026-10-1
 
 - Camera update moved to run after the network and physics step, with a rigid third-person follow. This fixes the ship jolting in third person.
 - Own custom controls, wall-aware free-fly camera, ships near the camera fade out.
+- Added Misc option "Show Observer Messages", a toggle for non-observers, under "No Player Chat Sound" (default on, saved as `showobsmessages`). The host relays observer chat to all players (`forward_obs_chat_to_players` in `main/net_udp.c`). No protocol change. Ported from D1s.
+- Chat from a host that is observing shows all blue (name and text), the same blue as observer chat, and follows the same toggle.
 
 ## Demos
 
