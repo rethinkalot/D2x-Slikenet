@@ -12,7 +12,7 @@ Everything since the clean baseline (tag `D2-SlikeNet-clean-baseline`, 2026-10-1
 - HUD link status at match start: "SLikeNet Peer Link Success" or "SLikeNet Peer Link Failure" per player.
 - Handshake diagnostics in the console: `SLikeNet Handshake OUT` on each connect attempt, `SLikeNet Handshake IN` every 5 s while handshakes arrive. Lane totals added to `memlog.txt`.
 - The 15 s no-packet player timeout is disabled (`net_udp_timeout_check` returns early). The 15 s unacknowledged-packet kick in `net_udp_noloss_process_queue` is commented out for players and observers. A full reliable-packet queue still dumps a non-acknowledging player.
-- Multiplayer protocol version unchanged (30006), so existing D2 builds still join.
+- Multiplayer protocol version raised from 30005 to 30006 ("Redux 1.1 + SLikeNet in-game transport", commit `4c4c860c`). Builds from the baseline cannot join games from this version.
 
 ## Running several copies on one PC
 
