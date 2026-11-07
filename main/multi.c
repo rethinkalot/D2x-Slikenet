@@ -2556,17 +2556,24 @@ multi_interp_update_remote(void)
         else
             orient = newer->orient;
 
-        // The interpolated point must still be inside the segment both updates
-        // were in, otherwise a wall or a closed door is being cut through.
-        if (find_point_seg(&pos, older->segnum) != older->segnum)
+        // The interpolated point must lie in the segment of one of the two updates, otherwise a wall or a
+        // closed door is being cut through. Crossing from one update's segment into the other's is normal and
+        // happens every few frames in flight; only a point outside both is a cut-through. (Rejecting that
+        // crossing snapped the ship forward to the newest update each time, seen as a jolt.)
         {
-            obj->pos = newer->pos;
-            obj->orient = newer->orient;
-            continue;
-        }
+            int seg = find_point_seg(&pos, older->segnum);
 
-        obj->pos = pos;
-        obj->orient = orient;
+            if (seg != older->segnum && seg != newer->segnum)
+            {
+                obj->pos = newer->pos;
+                obj->orient = newer->orient;
+                continue;
+            }
+            obj->pos = pos;
+            obj->orient = orient;
+            if (seg != obj->segnum)
+                update_object_seg(obj);
+        }
 #undef MULTI_INTERP_SAMPLE
     }
 }
