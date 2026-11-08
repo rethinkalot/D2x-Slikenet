@@ -970,6 +970,9 @@ int allowed_to_fire_laser(void)
 
 int allowed_to_fire_flare(void)
 {
+	if (Player_is_dead)
+		return 0;
+
 	if (Next_flare_fire_time > GameTime64)
 		return 0;
 
