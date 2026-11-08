@@ -2448,7 +2448,8 @@ multi_interp_update_remote(void)
 
     if (!(Game_mode & GM_MULTI) || !(Game_mode & GM_NETWORK))
         return;
-    if (Endlevel_sequence || Newdemo_state != ND_STATE_NORMAL)
+    // Smoothing also runs while recording, so the demo captures what is seen live.
+    if (Endlevel_sequence || Newdemo_state == ND_STATE_PLAYBACK)
         return;
 
       // Slikenet Rule: 90 PPS max for PvP, capped at 60 PPS for COOP modes

@@ -99,6 +99,7 @@ typedef struct Arg
 	int LogNetTraffic; 	
 	int GameLogTimeStamp;
 	int GameLogSplit;
+	int DemoLog;
 } Arg;
 
 extern struct Arg GameArg;

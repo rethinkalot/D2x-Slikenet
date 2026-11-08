@@ -282,7 +282,7 @@ menu:
 		nm_messagebox(TXT_ERROR, 1, TXT_OK, "Packet value out of range\nSetting value to 10");
 		Netgame.PacketsPerSec=10;
 	}
-	Netgame.ShortPackets=0; // the Short Packets menu item is commented out; opt_shortpack was never set, so this read the Difficulty slider
+	Netgame.ShortPackets=1; // always on, same as D1s: the observer needs it to link over SLikeNet (the menu item is commented out)
 
 	if ((atoi(UDP_MyPort)) <= 0 ||(atoi(UDP_MyPort)) > 65535)
 	{
@@ -785,6 +785,7 @@ int net_udp_setup_game()
 	netgame_set_defaults();
 
 	read_netgame_profile(&Netgame);
+	Netgame.ShortPackets = 1;	// a saved profile can hold 0, and there is no menu item to change it
 	hoard_equipped = HoardEquipped();
 
 	if (!hoard_equipped &&

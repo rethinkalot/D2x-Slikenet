@@ -235,6 +235,7 @@ void ReadCmdArgs(void)
 
 	GameArg.GameLogTimeStamp	= FindArg("-gamelog_timestamp");
 	GameArg.GameLogSplit		= FindArg("-gamelog_split");
+	GameArg.DemoLog		= FindArg("-demolog");
 }
 
 void args_exit(void)
