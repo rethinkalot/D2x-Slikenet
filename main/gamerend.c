@@ -693,7 +693,7 @@ void game_draw_hud_stuff()
 
 	render_countdown_gauge();
 
-	if (!is_observer() && GameCfg.FPSIndicator && PlayerCfg.CurrentCockpitMode != CM_REAR_VIEW)
+	if (GameCfg.FPSIndicator && PlayerCfg.CurrentCockpitMode != CM_REAR_VIEW)
 		show_framerate();
 
 	// Keep both timer readouts independent from the FPS indicator. RTA remains

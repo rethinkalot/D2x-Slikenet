@@ -953,11 +953,15 @@ void newdemo_record_start_frame(fix frame_time )
 	if (nd_record_v_recordframe_last_time > GameTime64)
 		nd_record_v_recordframe_last_time=GameTime64-nd_rec_delay;
 
-	if (nd_record_v_recordframe_last_time + nd_rec_delay <= GameTime64 || frame_time >= nd_rec_delay)
+	// Store the real time since the last recorded frame (not this frame's time raised to the
+	// interval): otherwise skipped frames make the recorded timeline run slow and playback stutters.
+	// Accept a frame once 3/4 of the interval has passed so frames at the cap aren't dropped by a hair.
+	if (GameTime64 - nd_record_v_recordframe_last_time >= nd_rec_delay * 3 / 4 || frame_time >= nd_rec_delay)
 	{
-		if (frame_time < nd_rec_delay)
-			frame_time = nd_rec_delay;
-		nd_record_v_recordframe_last_time = GameTime64-(GameTime64-(nd_record_v_recordframe_last_time + nd_rec_delay));
+		const fix64 elapsed = GameTime64 - nd_record_v_recordframe_last_time;
+
+		frame_time = (elapsed > 0 && elapsed < 0x7fffffff) ? (fix)elapsed : nd_rec_delay;
+		nd_record_v_recordframe_last_time = GameTime64;
 		nd_record_v_recordframe=1;
 
 		stop_time();
@@ -3182,7 +3186,6 @@ void interpolate_frame(fix d_play, fix d_recorded)
 	int i, j, num_cur_objs;
 	fix factor;
 	object *cur_objs;
-	static fix InterpolStep = fl2f(.01);
 
 	if (nd_playback_v_framecount < 1)
 		return;
@@ -3207,10 +3210,7 @@ void interpolate_frame(fix d_play, fix d_recorded)
 		return;
 	}
 
-	InterpolStep -= FrameTime;
-
-	// This interpolating looks just more crappy on high FPS, so let's not even waste performance on it.
-	if (InterpolStep <= 0)
+	// Interpolate every frame: throttling it to 100Hz froze motion between steps at high FPS.
 	{
 		for (i = 0; i <= num_cur_objs; i++) {
 			for (j = 0; j <= Highest_object_index; j++) {
@@ -3260,7 +3260,6 @@ void interpolate_frame(fix d_play, fix d_recorded)
 				}
 			}
 		}
-		InterpolStep = fl2f(.01);
 	}
 
 	// get back to original position in the demo file.  Reread the current
@@ -3278,6 +3277,15 @@ void interpolate_frame(fix d_play, fix d_recorded)
 		memcpy(&(Objects[i]), &(cur_objs[i]), sizeof(object));
 	Highest_object_index = num_cur_objs;
 	d_free(cur_objs);
+
+	// The interpolated viewer keeps the previous frame's segment while its position moves toward
+	// the next one; rendering starts from that segment, so it popped at every segment border.
+	if (Viewer && Viewer->segnum >= 0) {
+		const int seg = find_point_seg(&Viewer->pos, Viewer->segnum);
+
+		if (seg != -1 && seg != Viewer->segnum)
+			obj_relink(Viewer - Objects, seg);
+	}
 }
 
 void newdemo_playback_one_frame()
