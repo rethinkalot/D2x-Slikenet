@@ -201,6 +201,7 @@ ubyte multi_player_tex_color[MAX_PLAYERS];
 char RefuseThisPlayer=0,WaitForRefuseAnswer=0,RefuseTeam,RefusePlayerName[12];
 fix64 RefuseTimeLimit=0;
 extern void init_player_stats_new_ship(ubyte pnum);
+extern void observer_camera_update(void);		// located in gamecntl.c
 
 static const int message_length[] = {
 #define define_message_length(NAME,SIZE)	(SIZE),
@@ -2617,6 +2618,8 @@ multi_do_reappear(const ubyte *buf)
     }
 
     multi_make_ghost_player(Objects[objnum].id);
+    if (is_observer())
+        observer_camera_update(); // camera to the respawned ship first, so its respawn sound isn't placed from the death site
     create_player_appearance_effect(&Objects[objnum]);
     PKilledFlags[pnum]=0;
 #ifdef USE_UDP
@@ -2737,6 +2740,8 @@ multi_do_player_explode(const ubyte *buf)
     if (PKilledFlags[pnum] < 1) // seems we got reappear already so make him player again!
     {
         multi_make_ghost_player(Objects[Players[pnum].objnum].id);
+        if (is_observer())
+            observer_camera_update(); // camera to the respawned ship first, so its respawn sound isn't placed from the death site
         create_player_appearance_effect(&Objects[Players[pnum].objnum]);
         PKilledFlags[pnum] = 0;
     }
@@ -6644,9 +6649,7 @@ int get_observer_game_mode()
         return 1;
     // This is a 1v1, or only one player is connected (which we'll treat like a 1v1)
     else {
-        // This function should only be called in multiplayer.
-        // Return 0 (1v1) in single-player to avoid a crash, but this indicates a bug.
-        Assert(Game_mode & GM_MULTI);
+        // Observer demo playback sets GM_OBSERVER without GM_MULTI, so this is reached outside multiplayer too.
         return 0;
     }
 }

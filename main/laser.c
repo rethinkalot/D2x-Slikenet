@@ -85,6 +85,14 @@ static int using_original_d1_weapons(void)
 // Called by render code.... determines if the laser is from a robot or the
 // player and calls the appropriate routine.
 
+// Guns of the ship whose cockpit we are in play centered: our own, or the ship an observer
+// follows in first person (its gun tips sit beside the camera and would pan hard to one side).
+static int fire_sound_is_local(int parent_objnum)
+{
+	return parent_objnum == Viewer-Objects ||
+		(is_observing_player() && !Obs_at_distance && parent_objnum == Players[Current_obs_player].objnum);
+}
+
 void Laser_render(object *obj)
 {
 
@@ -569,7 +577,7 @@ void do_omega_stuff(object *parent_objp, vms_vector *firing_pos, object *weapon_
 	firing_segnum = find_point_seg(firing_pos, parent_objp->segnum);
 
 	//	Play sound.
-	if ( parent_objp == Viewer )
+	if ( fire_sound_is_local(parent_objp-Objects) )
 		digi_play_sample( Weapon_info[weapon_objp->id].flash_sound, F1_0 );
 	else
 		digi_link_sound_to_pos( Weapon_info[weapon_objp->id].flash_sound, weapon_objp->segnum, 0, &weapon_objp->pos, 0, F1_0 );
@@ -761,7 +769,7 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 	volume = F1_0;
 	if (Weapon_info[obj->id].flash_sound > -1 )	{
 		if (make_sound)	{
-			if ( parent == (Viewer-Objects) )	{
+			if ( fire_sound_is_local(parent) )	{
 				if (weapon_type == VULCAN_ID)	// Make your own vulcan gun  1/2 as loud.
 					volume = F1_0 / 2;
 				if(weapon_type == PLASMA_ID && PlayerCfg.QuietPlasma)  // Plasma's a bit loud, too
