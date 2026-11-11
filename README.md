@@ -59,18 +59,32 @@
 
 ## BugFixes
 
-- **No ship flash before respawn.** A dead player's ship no longer shows briefly at the spot they died just before they spawn.
-- **No stray shots from the death spot.** Pressing fire to respawn no longer makes a shot appear where you died.
-- **No flares while dead.** With Preview spawn, a dead player can no longer launch a flare from where they died.
-- **Position updates go out sooner.** Ship positions are sent right away instead of waiting up to 10 ms. Positions stuck in the send queue for over 100 ms are dropped instead of arriving late in a burst.
-- **Network clock fix.** The network clock no longer loses up to one frame every 65 seconds.
-- **Quieter `-debug` console.** The per-packet `Packet OUT` and `Packet IN` lines are off. The traffic summary lines stay.
-- **Velocity meter clear of FPS.** In the death camera's letterbox view the velocity meter sits in the bottom bar instead of on top of the FPS line.
-- **F3 in demo playback.** F3 cycles the cockpit views during normal demo playback again.
-- **HUD modes in demos.** Alt+F7 now cycles the HUD modes during demo playback too, and the demo F1 screen lists it.
-- **Cruise survives respawn.** Die with cruise control on and you respawn with it still on, at the same speed.
-- **Last Input Wins.** New Controls option under Sticky Rearview, off by default. With both opposite slide or bank directions held, the one pressed last moves the ship instead of the two cancelling out.
-- **`frametime` toggles the FPS counter.** Type it in game or during demo playback. It is not a cheat: no cheat flag, and your score is kept.
-- **Shield orb tilt.** The 3D shield orb now spins at a 44-degree tilt.
-- **No developer cheats.** Builds are Release only, so the Delete+key test keys and the Delete+C cheat menu can no longer be used.
+- **No ship flash before respawn** 
+A dead player's ship no longer shows briefly at the spot they died just before they spawn.
+- **No Stray Shots from the death spot**
+ Pressing fire to respawn no longer makes a shot appear where you died.
+- **No Flares While Dead** 
+With Preview spawn, a dead player can no longer launch a flare from where they died.
+- **Position Updates go out Uooner** 
+Ship positions are sent right away instead of waiting up to 10 ms. Positions stuck in the send queue for over 100 ms are dropped instead of arriving late in a burst.
+- **Network Clock Fix**
+The network clock no longer loses up to one frame every 65 seconds.
+- **Quieter -debug console** 
+The per-packet **Packet OUT** and **Packet IN** lines are off. The traffic summary lines stay.
+- **Velocity clear of FPS** 
+In the death camera's letterbox view the velocity meter sits in the bottom bar instead of on top of the FPS line.
+- **F3 in Demo Playback** 
+F3 cycles the cockpit views during normal demo playback again.
+- **HUD Modes in Demos** 
+Alt+F7 now cycles the HUD modes during demo playback too, and the demo F1 screen lists it.
+- **Cruise Survives Respawn** 
+Die with cruise control on and you respawn with it still on, at the same speed.
+- **Last Input Wins** 
+New Controls option under Sticky Rearview, off by default. With both opposite slide or bank directions held, the one pressed last moves the ship instead of the two cancelling out.
+- **frametime** 
+toggles the FPS counter Type it in game or during demo playback. 
+- **Shield Orb Tilt**
+ The 3D shield orb now spins at a 44-degree tilt.
+- **No Developer Cheats**
+ Builds are Release only, so the Delete+key test keys and the Delete+C cheat menu can no longer be used.
 
