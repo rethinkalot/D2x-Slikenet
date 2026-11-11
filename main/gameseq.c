@@ -131,6 +131,7 @@ obj_position	Player_init[MAX_PLAYERS];
 int NumNetPlayerPositions = -1;
 
 extern fix ThisLevelTime;
+extern fix Cruise_speed; // kconfig.c
 
 // Extern from game.c to fix a bug in the cockpit!
 
@@ -1758,8 +1759,10 @@ void DoPlayerDead()
 			}
 		}
 	} else {
+		fix cruise = Cruise_speed; // respawn keeps cruise control as it was at death (StartLevel resets it)
 		init_player_stats_new_ship(Player_num);
 		StartLevel(1);
+		Cruise_speed = cruise;
 	}
 
 	digi_sync_sounds();

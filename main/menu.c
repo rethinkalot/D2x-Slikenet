@@ -1149,7 +1149,7 @@ void input_config_sensitivity()
 		}
 }
 
-static int opt_ic_usejoy = 0, opt_ic_usemouse = 0, opt_ic_confkey = 0, opt_ic_confjoy = 0, opt_ic_confmouse = 0, opt_ic_confweap = 0, opt_ic_confobs = 0, opt_ic_mouseflightsim = 0, opt_ic_joymousesens = 0, opt_ic_grabinput = 0, opt_ic_mousefsgauge = 0, opt_ic_stickyrear = 0, opt_ic_help0 = 0, opt_ic_help1 = 0, opt_ic_help2 = 0;
+static int opt_ic_usejoy = 0, opt_ic_usemouse = 0, opt_ic_confkey = 0, opt_ic_confjoy = 0, opt_ic_confmouse = 0, opt_ic_confweap = 0, opt_ic_confobs = 0, opt_ic_mouseflightsim = 0, opt_ic_joymousesens = 0, opt_ic_grabinput = 0, opt_ic_mousefsgauge = 0, opt_ic_stickyrear = 0, opt_ic_lastinput = 0, opt_ic_help0 = 0, opt_ic_help1 = 0, opt_ic_help2 = 0;
 int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 {
 	newmenu_item *items = newmenu_get_items(menu);
@@ -1176,7 +1176,9 @@ int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 			if (citem == opt_ic_mousefsgauge)
 				PlayerCfg.MouseFSIndicator = items[citem].value;
 			if (citem == opt_ic_stickyrear)			
-				PlayerCfg.StickyRearview = items[citem].value;		
+				PlayerCfg.StickyRearview = items[citem].value;
+			if (citem == opt_ic_lastinput)
+				PlayerCfg.LastInputWins = items[citem].value;
 			break;
 
 		case EVENT_NEWMENU_SELECTED:
@@ -1210,7 +1212,7 @@ int input_config_menuset(newmenu *menu, d_event *event, void *userdata)
 
 void input_config()
 {
-	newmenu_item m[23];
+	newmenu_item m[24];
 	int nitems = 0;
 
 	opt_ic_usejoy = nitems;
@@ -1244,6 +1246,8 @@ void input_config()
 	m[nitems].type = NM_TYPE_CHECK; m[nitems].text= "Mouse FlightSim Indicator"; m[nitems].value = PlayerCfg.MouseFSIndicator; nitems++;
 	opt_ic_stickyrear = nitems;
 	m[nitems].type = NM_TYPE_CHECK; m[nitems].text= "Sticky Rearview"; m[nitems].value = PlayerCfg.StickyRearview; nitems++;
+	opt_ic_lastinput = nitems;
+	m[nitems].type = NM_TYPE_CHECK; m[nitems].text= "Last Input Wins (Slide/Bank)"; m[nitems].value = PlayerCfg.LastInputWins; nitems++;
 	m[nitems].type = NM_TYPE_TEXT; m[nitems].text = ""; nitems++;
 	opt_ic_help0 = nitems;
 	m[nitems].type = NM_TYPE_MENU; m[nitems].text = "GAME SYSTEM KEYS"; nitems++;

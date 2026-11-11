@@ -130,11 +130,11 @@ void draw_powerup(object *obj)
 			obj->id == POW_SHIELD_BOOST || obj->id == POW_CLOAK ||
 			obj->id == POW_INVULNERABILITY)
 		{
-			// Shield rides at a fixed ~27-degree vertical tilt (D1 look) so its
+			// Shield rides at a fixed 44-degree vertical tilt (same as D1) so its
 			// bolt ring reads diagonal while it yaws; the rest of this group
 			// stays level.
 			if (obj->id == POW_SHIELD_BOOST)
-				angles.p = F1_0 * 27 / 360;
+				angles.p = F1_0 * 44 / 360;
 			else
 				angles.p = 0;
 		}

@@ -4566,7 +4566,8 @@ void hud_show_vel()
 	//	cockpit art in full cockpit -- each one line higher than before, which is
 	//	where they read correctly. Falls back to the stack baseline in full screen
 	//	/ letterbox, where there is no status bar to sit under.
-	int sb_top = Screen_3d_window.cv_bitmap.bm_h;
+	// Bottom edge of the 3D view: letterbox (death camera) offsets it by the top bar, so the height alone lands on the FPS line
+	int sb_top = Screen_3d_window.cv_bitmap.bm_y + Screen_3d_window.cv_bitmap.bm_h;
 	int y;
 	if (sb_top > 0 && sb_top < SHEIGHT)
 		y = sb_top + (PlayerCfg.CurrentCockpitMode == CM_STATUS_BAR ? 0 : LINE_SPACING);

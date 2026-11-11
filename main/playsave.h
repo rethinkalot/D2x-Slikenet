@@ -101,6 +101,7 @@ typedef struct player_config
 	int DynLightColor;
 	ubyte DisableCockpit;  /* DisableCockpit */
 	ubyte StickyRearview; /* StickyRearview */
+	ubyte LastInputWins; // opposite slide/bank: the direction pressed last wins instead of cancelling
 	ubyte SelectAfterFire; /* SelectAfterFire */
 	int maxFps;
 	int ShipColor;
