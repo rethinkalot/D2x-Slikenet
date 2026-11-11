@@ -9,5 +9,6 @@ jobs:
     steps:
       - run: >
           curl -sf -H "Content-Type: application/json"
-          -d '{"content":"New D2x-Redux-SLikeNet build: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D1x-Redux-SLikeNet.zip"}'
+          -d '{"content":"New D2x-Redux-SLikeNet build: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D2x-Redux-SLikeNet.zip"}'
           "${{ secrets.DISCORD_WEBHOOK }}"
+
