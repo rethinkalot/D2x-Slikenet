@@ -104,6 +104,7 @@ extern void newdemo_record_player_score(int score);
 extern void newdemo_record_multi_score(int pnum, int score);
 extern void newdemo_record_primary_ammo(int new_ammo);
 extern void newdemo_record_secondary_ammo(int new_ammo);
+extern void newdemo_record_bomb_ammo(int bomb);
 extern void newdemo_record_door_opening(int segnum, int side);
 extern void newdemo_record_laser_level(sbyte old_level, sbyte new_level);
 extern void newdemo_record_cloaking_wall(int front_wall_num, int back_wall_num, ubyte type, ubyte state, fix cloak_value, fix l0, fix l1, fix l2, fix l3);

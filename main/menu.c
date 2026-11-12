@@ -406,8 +406,17 @@ void draw_copyright()
 	gr_set_curfont(GAME_FONT);
 	gr_set_fontcolor(BM_XRGB(6,6,6),-1);
 	gr_string(0x8000,SHEIGHT-LINE_SPACING,TXT_COPYRIGHT);
-	gr_set_fontcolor( BM_XRGB(25,0,0), -1);
-	gr_string(0x8000,SHEIGHT-(LINE_SPACING*2),DESCENT_VERSION);
+	{
+		// The title palette has no true red (any red lands on orange). OGL reads the text colour from
+		// gr_current_pal at draw time, so set one entry to exact red (DEMO RECORDING's 27,0,0) just for this line.
+		int c = BM_XRGB(27,0,0);
+		ubyte saved[3];
+		memcpy(saved, &gr_current_pal[c*3], 3);
+		gr_current_pal[c*3] = 54; gr_current_pal[c*3+1] = 0; gr_current_pal[c*3+2] = 0;
+		gr_set_fontcolor(c, -1);
+		gr_string(0x8000,SHEIGHT-(LINE_SPACING*2),DESCENT_VERSION);
+		memcpy(&gr_current_pal[c*3], saved, 3);
+	}
 }
 
 //returns the number of demo files on the disk

@@ -607,9 +607,12 @@ int pick_up_secondary(int weapon_index,int count)
 	int max;
 	int	num_picked_up;
 	int cutpoint;
+	const int cur_secondary = Players[Player_num].secondary_weapon;
+	// Sitting on a mine (auto-select falls through to smart mines when missiles run dry) counts as out of missiles.
 	const int suppress_autoselect = PlayerCfg.AutoselectOnlyOnce &&
 		SecondaryWeaponPickedUp &&
-		Players[Player_num].secondary_ammo[Players[Player_num].secondary_weapon];
+		Players[Player_num].secondary_ammo[cur_secondary] &&
+		cur_secondary != PROXIMITY_INDEX && cur_secondary != SMART_MINE_INDEX;
 
 	max = Secondary_ammo_max[weapon_index];
 

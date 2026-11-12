@@ -1184,8 +1184,6 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 			}else
 				x-=w+FSPACX(3);
 			gr_string(x, y, weapon_str);
-			if (i == 1 && Players[pnum].primary_weapon == i && PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
-				gr_printf(x,y-(LINE_SPACING*1),"V:%i",f2i((unsigned int)Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
 		}
 	} else {
 		for (i=4;i>=0;i--){
@@ -1260,11 +1258,8 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 
 			gr_string(x, y, weapon_str);
 
-			if (i == 6 && Players[pnum].primary_weapon == i && PlayerCfg.CurrentCockpitMode==CM_FULL_SCREEN)
-				gr_printf(x+FSPACX(9),y-(LINE_SPACING*2),"G:%i",f2i((unsigned int)Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
-
-			// Deal with vulcan ammo uniformly here
-			if (i == 6) {
+			// Deal with vulcan ammo uniformly here (vertical only; Alt HUD #1 uses the popup below)
+			if (i == 6 && vertical) {
 				sprintf(weapon_str,"%i", f2i((unsigned int)Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
 
 				if (Players[pnum].primary_weapon==1 || Players[pnum].primary_weapon == 6) {
@@ -1279,7 +1274,16 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 				gr_string(x + FSPACX(6), y, weapon_str);
 			}
 
-			
+
+		}
+
+		// Alt HUD #1 slot above L V S P F, right-aligned like the letter rows
+		if (!vertical && (Players[pnum].primary_weapon == 1 || Players[pnum].primary_weapon == 6)) {
+			sprintf(weapon_str, "%c:%i", Players[pnum].primary_weapon == 6 ? 'G' : 'V',
+				f2i((unsigned int)Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
+			gr_set_fontcolor(BM_XRGB(20,0,0),-1);
+			gr_get_string_size(weapon_str, &w, &h, &aw);
+			gr_string(orig_x - w - FSPACX(3), orig_y - LINE_SPACING, weapon_str);
 		}
 	} else {
 		for (i=9;i>=5;i--){
@@ -1320,12 +1324,13 @@ void hud_show_weapons(void)
 
 	y = grd_curcanv->cv_bitmap.bm_h;
 
-	if (Game_mode & GM_MULTI)
+	if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
 		y -= LINE_SPACING*4;
 
 	if (PlayerCfg.HudMode==1){
 		hud_show_weapons_mode(0,0,grd_curcanv->cv_bitmap.bm_w,y-(LINE_SPACING*4));
 		hud_show_weapons_mode(1,0,grd_curcanv->cv_bitmap.bm_w,y-(LINE_SPACING*2));
+		show_bomb_count(grd_curcanv->cv_bitmap.bm_w-FSPACX(3), y-(LINE_SPACING*6),-1,1,1);
 	}
 	else if (PlayerCfg.HudMode==2){
 		int x1,x2;
@@ -2713,18 +2718,20 @@ void hud_show_kill_list()
 		}
 
 
-		if((Show_network_stats && !is_observer()) && player_num != Player_num && Players[player_num].connected && Show_kill_list != 3) {
+		// Observers watching a player see ping from that player's point of view (upstream dxx-redux 5a11ce9)
+		int my_player_num = is_observing_player() ? Current_obs_player : Player_num;
+		if((Show_network_stats && (!is_observer() || is_observing_player())) && player_num != my_player_num && Players[player_num].connected && Show_kill_list != 3) {
 			int lag = -1;
 
 			if(Netgame.RetroProtocol) {
 				lag = Netgame.players[player_num].ping;
 			} else {
-				if(multi_i_am_master()) {
+				if (my_player_num == multi_who_is_master()) {
 					lag = Netgame.players[player_num].ping;
 				} else if (player_num == multi_who_is_master()) {
-					lag = Netgame.players[Player_num].ping;
+					lag = Netgame.players[my_player_num].ping;
 				} else {
-					lag = Netgame.players[Player_num].ping + Netgame.players[player_num].ping;
+					lag = Netgame.players[my_player_num].ping + Netgame.players[player_num].ping;
 				}
 			}
 
@@ -4180,7 +4187,7 @@ void observer_show_kill_list()
 	// Show the kill graph, which is a line graph of kills over time for each pilot, and kill summaries, which is each pilot's most damaging weapon(s).
 	observer_maybe_show_kill_graph();
 
-	int y = grd_curcanv->cv_bitmap.bm_h - 5;
+	int y = hud_stack_y(); // start above the FPS line
 
 	if (PlayerCfg.ObsShowObs[get_observer_game_mode()]) {
 		y = maybe_show_observers(y);
@@ -4510,7 +4517,7 @@ void observer_show_bomb_highlights()
 }
 
 //	Show the player's current velocity, plus a rolling max over the last
-//	VEL_HIST frames, and the current rotational rate. Gated on
+//	VEL_HIST frames. Gated on
 //	PlayerCfg.ShowVelocityMeter (Misc Options menu).
 //
 //	Drawn on the shared bottom-right stack (see hud_stack_y() in gamerend.c) one
@@ -4527,9 +4534,7 @@ void hud_show_vel()
 	static int velidx = 0;
 	float velmax;
 	vms_vector *vel = &ConsoleObject->mtype.phys_info.velocity;
-	vms_vector *rot = &ConsoleObject->mtype.phys_info.rotvel;
 	float velmag = f2fl(vm_vec_mag(vel));
-	float rotmag = f2fl(vm_vec_mag(rot));
 	veltot += velmag - vels[velidx];
 	vels[velidx] = velmag;
 	if (++velidx == VEL_HIST)
@@ -4538,11 +4543,7 @@ void hud_show_vel()
 	for (int i = 0; i < VEL_HIST; i++)
 		if (vels[i] > velmax)
 			velmax = vels[i];
-	//	Rotation is a magnitude, so it is always >= 0 and the two decimals hold a
-	//	fixed width; velocity keeps its max, rotation does not.
-	snprintf(vel_str, sizeof(vel_str), "%2.1f max %2.1f rot %2.2f", //"%+2.1f %+2.1f %+2.1f = %+2.1f",
-		//f2fl(vel->x), f2fl(vel->y), f2fl(vel->z),
-		velmag, velmax, rotmag);
+	snprintf(vel_str, sizeof(vel_str), "%2.1f max %2.1f", velmag, velmax);
 	for (p = vel_str; *p; p++)
 		if (*p == '1')
 			*p = '\x84'; // fixed width 1
@@ -4595,6 +4596,8 @@ void draw_hud()
 		if (Players[pnum].primary_weapon == OMEGA_INDEX)
 			newdemo_record_primary_ammo(Omega_charge);
 		newdemo_record_secondary_ammo(Players[pnum].secondary_ammo[Players[pnum].secondary_weapon]);
+		newdemo_record_bomb_ammo(PROXIMITY_INDEX);
+		newdemo_record_bomb_ammo(SMART_MINE_INDEX);
 	}
 
 	n_players = multi_get_kill_list(player_list);
@@ -4643,6 +4646,9 @@ void draw_hud()
 				//	Velocity readout, shown in every cockpit mode (not rear view).
 				if (PlayerCfg.ShowVelocityMeter)
 					hud_show_vel();
+
+			if (Show_network_stats && Show_kill_list)
+				hud_show_kill_list();
 
 		}
 
@@ -4739,7 +4745,7 @@ void draw_hud()
 
 			if (PlayerCfg.CurrentCockpitMode == CM_FULL_SCREEN || (is_observer() && !can_draw_observer_cockpit())) {
 				if ((Game_mode & GM_MULTI) || (Newdemo_state == ND_STATE_PLAYBACK && Newdemo_game_mode & GM_MULTI))
-					startY -= LINE_SPACING * 12;
+					startY -= LINE_SPACING * 15; // above the FPS line (row 15)
 				else
 					startY -= LINE_SPACING * 6;
 			}
