@@ -56,6 +56,10 @@
 - **Original D1 Weapons (SP).** Misc menu toggle for single-player D2.
 - **Velocity meter.** New optional readout, toggled in the Misc menu. Velocity is recorded into demos whether or not the readout is shown.
 - **Power-ups.** Fixed orientation and rotation for 3D models. Spin speeds are retuned and Quad Fire is tilted.
+- **3D Mines**
+Live smart mines (player and robot) and live proximity bombs with custom models are on, each spinning once every 1.5 seconds.
+- **Mine Pack Spin**
+The smart mine pack now spins at the same speed as the proximity bomb pack.
 
 ## BugFixes
 
@@ -65,7 +69,7 @@ A dead player's ship no longer shows briefly at the spot they died just before t
  Pressing fire to respawn no longer makes a shot appear where you died.
 - **No Flares While Dead** 
 With Preview spawn, a dead player can no longer launch a flare from where they died.
-- **Position Updates go out Uooner** 
+- **Position Updates go out Sooner** 
 Ship positions are sent right away instead of waiting up to 10 ms. Positions stuck in the send queue for over 100 ms are dropped instead of arriving late in a burst.
 - **Network Clock Fix**
 The network clock no longer loses up to one frame every 65 seconds.
@@ -81,10 +85,15 @@ Alt+F7 now cycles the HUD modes during demo playback too, and the demo F1 screen
 Die with cruise control on and you respawn with it still on, at the same speed.
 - **Last Input Wins** 
 New Controls option under Sticky Rearview, off by default. With both opposite slide or bank directions held, the one pressed last moves the ship instead of the two cancelling out.
-- **frametime** 
-toggles the FPS counter Type it in game or during demo playback. 
+- **FRAMETIME** 
+Toggles the FPS counter. Type it in game or during demo playback. 
 - **Shield Orb Tilt**
  The 3D shield orb now spins at a 44-degree tilt.
 - **No Developer Cheats**
  Builds are Release only, so the Delete+key test keys and the Delete+C cheat menu can no longer be used.
-
+- **Trap Cheat Codes Removed**
+The leftover trap codes removed. The shipped single-player cheats still work, and no cheat works in multiplayer.
+- **Smart Mine Pack Comes Back**
+Lay some of a smart mine pack and die holding the rest, and a full pack drops where you died, in co-op too. Mines laid in an earlier level no longer count toward the next one.
+- **Your Mines Stay Put**
+Your own smart mines and proximity bombs no longer set each other off when laid close together. 
