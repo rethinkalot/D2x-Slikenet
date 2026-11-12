@@ -17,6 +17,7 @@ extern "C" {
 #include "polyobj.h"
 #include "texmap.h"
 #include "powerup.h"
+#include "laser.h"
 }
 
 struct CGameFolders gameFolders;
@@ -359,6 +360,17 @@ static int xmodel_translate(enum xmodel_type type, int modelnum)
 			case POW_MERCURY_MISSILE_1: return model_mercury;
 			case POW_MERCURY_MISSILE_4: return model_mercury4;
 			case POW_EARTHSHAKER_MISSILE: return model_eshaker;
+			default: return -1;
+		}
+	}
+
+	if (type == XM_WEAPON)
+	{
+		switch (modelnum)
+		{
+			case SUPERPROX_ID:
+			case ROBOT_SUPERPROX_ID: return model_nsmartmine; // smartmine.ase
+			case PROXIMITY_ID: return model_proxmine;
 			default: return -1;
 		}
 	}

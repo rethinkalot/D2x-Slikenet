@@ -115,6 +115,8 @@ void Laser_render(object *obj)
 					//Laser_draw_one(obj-Objects, Weapon_info[obj->id].bitmap );
 		break;
 	case WEAPON_RENDER_BLOB:
+		if (draw_weapon_xmodel(obj)) // D2 prox bomb is a blob: proxmine.ase
+			break;
 		draw_object_blob(obj, Weapon_info[obj->id].bitmap  );
 		break;
 	case WEAPON_RENDER_POLYMODEL:

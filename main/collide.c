@@ -2661,6 +2661,9 @@ void collide_weapon_and_weapon( object * weapon1, object * weapon2, vms_vector *
 		//	Bug reported by Adam Q. Pletcher on September 9, 1994, smart bomb homing missiles were toasting each other.
 		if ((weapon1->id == weapon2->id) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
 			return;
+		//	Your own prox bombs and smart mines don't set each other off.
+		if (is_proximity_bomb_or_smart_mine(weapon1->id) && is_proximity_bomb_or_smart_mine(weapon2->id) && (weapon1->ctype.laser_info.parent_num == weapon2->ctype.laser_info.parent_num))
+			return;
 
 		if (Weapon_info[weapon1->id].destroyable)
 			if (maybe_detonate_weapon(weapon1, weapon2, collision_point))

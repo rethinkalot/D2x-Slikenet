@@ -252,7 +252,7 @@ const char *xmodelnames[] = {
 	"laser6.ase",
 	"mercury.ase",
 	"mercury4.ase",
-	"Nsmartmine.ase",
+	"smartmine.ase",
 	"omega.ase",
 	"phoenix.ase",
 	"sheilda.ase",
@@ -423,7 +423,7 @@ short xmodel_xlate[] = {
 	model_botlas6_outer,
 	model_botlas6_inner,
 	model_flashmsl,
-	model_mine,
+	-1, // little red mine (PMINE): no model
 	model_earthshakerchild,
 	model_mercurymsl,
 	model_smartmsl,

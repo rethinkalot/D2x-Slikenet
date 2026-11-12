@@ -24,6 +24,11 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "vclip.h"
 #include "weapon.h"
 #include "laser.h"
+#include "game.h"
+#include "multi.h"
+#include "config.h"
+#include "xmodel.h"
+#include "gr.h"
 
 //----------------- Variables for video clips -------------------
 int 					Num_vclips = 0;
@@ -55,6 +60,26 @@ void draw_vclip_object(object *obj,fix timeleft,int lighted, int vclip_num)
 }
 
 
+// Draw a live mine as its .ase model; returns 1 if drawn, else the caller draws the sprite.
+int draw_weapon_xmodel(object *obj)
+{
+#ifdef OGL
+	if (GameCfg.UseCustomModels && (!(Game_mode & GM_MULTI) || Netgame.AllowCustomModelsTextures) &&
+		xmodel_exists(XM_WEAPON, obj->id)) {
+		vms_matrix orient;
+		vms_angvec angles = { 0, 0, 0 };
+		g3s_lrgb lrgb = { F1_0, F1_0, F1_0 };
+		fix64 rotation_duration = F1_0 * 3 / 2; // 1.5 s per turn, same as D1 proxmine.ase
+
+		angles.h = (fixang)(GameTime64 * F1_0 / rotation_duration);
+		vm_angles_2_matrix(&orient, &angles);
+		gr_settransblend(GR_FADE_OFF, GR_BLEND_NORMAL); // solid model, not the additive sprite blend
+		return xmodel_show_if_loaded(XM_WEAPON, obj->id, &obj->pos, &orient, -1, &lrgb);
+	}
+#endif
+	return 0;
+}
+
 void draw_weapon_vclip(object *obj)
 {
 	int	vclip_num;
@@ -63,6 +88,9 @@ void draw_weapon_vclip(object *obj)
 	Assert(obj->type == OBJ_WEAPON);
 
 	vclip_num = Weapon_info[obj->id].weapon_vclip;
+
+	if (draw_weapon_xmodel(obj))
+		return;
 
 	modtime = obj->lifeleft;
 	play_time = Vclip[vclip_num].play_time;

@@ -3842,16 +3842,17 @@ void multi_powcap_cap_objects()
         return;
 
 
-    // Bad interaction with savegames -- CED -- coopfix
-    if(Game_mode & GM_MULTI_COOP) {
-        return;
-    }
-
+    // Credit a partly laid pack back in every mode (co-op included), so it drops as a full pack on death.
     if (!(Game_mode & GM_HOARD))
           Players[Player_num].secondary_ammo[PROXIMITY_INDEX]+=Proximity_dropped;
     Players[Player_num].secondary_ammo[SMART_MINE_INDEX]+=Smartmines_dropped;
     Proximity_dropped=0;
     Smartmines_dropped=0;
+
+    // Bad interaction with savegames -- CED -- coopfix
+    if(Game_mode & GM_MULTI_COOP) {
+        return;
+    }
 
     // Don't even try.  TODO: There is no try, only do.
     if(Netgame.PrimaryDupFactor > 1 || Netgame.SecondaryDupFactor > 1 || Netgame.SecondaryCapFactor > 1 ) {
@@ -4658,6 +4659,8 @@ void multi_prep_level(void)
 {
     // Do any special stuff to the level required for games
     // before we begin playing in it.
+
+    Proximity_dropped = Smartmines_dropped = 0; // laid-mine counts don't carry into a new level
 
     // Player_num MUST be set before calling this procedure.
 

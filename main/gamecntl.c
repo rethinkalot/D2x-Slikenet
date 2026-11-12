@@ -1606,7 +1606,7 @@ char AcidCheatOn=0;
 char old_IntMethod;
 
 #define CHEAT_MAX_LEN 15
-#define NUM_CHEATS    28
+#define NUM_CHEATS    21
 
 typedef struct cheat_code
 {
@@ -1615,14 +1615,7 @@ typedef struct cheat_code
 } __pack__ cheat_code;
 
 cheat_code cheat_codes[NUM_CHEATS] = {
-	{ "gabbagabbahey", &cheats.lamer },
-	{ "motherlode", &cheats.lamer },
-	{ "currygoat", &cheats.lamer },
-	{ "zingermans", &cheats.lamer },
-	{ "eatangelos", &cheats.lamer },
-	{ "ericaanne", &cheats.lamer },
-	{ "joshuaakira", &cheats.lamer },
-	{ "whammazoom", &cheats.lamer },
+	{ "gabbagabbahey", &cheats.lamer }, // slot 0 filler: a match here is treated as no match
 	{ "honestbob", &cheats.wowie },
 	{ "algroove", &cheats.allkeys },
 	{ "alifalafel", &cheats.accessory },
@@ -1692,12 +1685,6 @@ int FinalCheats(int key)
 	
 	if (!gotcha)
 		return 0;
-
-	if (cheat_codes[gotcha].stateptr == &cheats.lamer)
-	{
-		Players[Player_num].shields=Players[Player_num].energy=i2f(1);
-		HUD_init_message_literal(HM_DEFAULT, "Take that...cheater!");
-	}
 
 	if (cheat_codes[gotcha].stateptr == &cheats.wowie)
 	{

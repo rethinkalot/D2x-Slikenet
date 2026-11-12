@@ -179,7 +179,7 @@ void draw_powerup(object *obj)
 		if (obj->id == POW_SHIELD_BOOST || obj->id == POW_CLOAK ||
 			obj->id == POW_EXTRA_LIFE || obj->id == POW_INVULNERABILITY)
 			rotation_duration = rotation_duration * 100 / 65;
-		else if (obj->id == POW_PROXIMITY_WEAPON)
+		else if (obj->id == POW_PROXIMITY_WEAPON || obj->id == POW_SMART_MINE)
 			rotation_duration *= 2;
 		angles.h = (fixang)(GameTime64 * F1_0 / rotation_duration);
 		if (obj->id == POW_AFTERBURNER)
