@@ -35,6 +35,10 @@
 - **Observing host chat is blue too.** A host who is observing chats in the same all-blue style, name and text, and follows the same toggle.
 - **Centered gun sounds.** Following a ship in first person, its guns sound centered, the same as your own.
 - **Respawn sound in place.** The observed ship's respawn sound plays where it respawns, not from where it died.
+- **Observer List Above FPS**
+The OBSERVERS list and streaks sit above the FPS line in every view, live and in observer demo playback, instead of at the bottom right over the weapon rows.
+- **Observer Ping**
+Following a player with F6 network stats and the kill list on, the kill list shows ping from that player's point of view.
 
 ## Demos
 
@@ -45,6 +49,8 @@
 - **Playback HUD.** `FPS` shows your live frame rate and `DEMO` shows the rate the demo was recorded at, so you can compare. The `DEMO` readout no longer jumps around during playback and, like `FPS`, updates once a second.
 - **No seam at segment borders.** The playback view no longer pops when the camera crosses a segment.
 - **Fixes.** Afterburner states are recorded and replayed, and demo playback now plays the afterburner sound. The HUD no longer goes blank when fast-forwarding demos as an observer. Fast-forward and rewind steps scale with your FPS cap.
+- **Bomb Count In Demos**
+Prox bombs and smart mines picked up or dropped while another secondary is selected now show in playback, rewind included. Older demos still play.
 
 ## HUD and options
 
@@ -60,6 +66,12 @@
 Live smart mines (player and robot) and live proximity bombs with custom models are on, each spinning once every 1.5 seconds.
 - **Mine Pack Spin**
 The smart mine pack now spins at the same speed as the proximity bomb pack.
+- **Fixed HUD Rows**
+Full screen keeps FPS, DEMO, RTA, IGT and velocity stacked above the weapon rows, so nothing overlaps and nothing moves when you switch HUD modes. Multiplayer and multiplayer demo playback use the same layout, and Alt HUD #1 now shows the bomb count.
+- **One Gauss And Vulcan Readout**
+Alt HUD #1 shows a single G: or V: ammo line for the selected gun instead of two, and Alt HUD #2 no longer draws ammo over the laser level.
+- **Velocity Without ROT**
+The velocity meter drops the rotation readout.
 
 ## BugFixes
 
@@ -97,3 +109,9 @@ The leftover trap codes removed. The shipped single-player cheats still work, an
 Lay some of a smart mine pack and die holding the rest, and a full pack drops where you died, in co-op too. Mines laid in an earlier level no longer count toward the next one.
 - **Your Mines Stay Put**
 Your own smart mines and proximity bombs no longer set each other off when laid close together. 
+- **Cheat Codes Work Again**
+Typed single-player cheat codes work again. The frametime check was eating every typed letter before the cheat check saw it.
+- **Red Version Text**
+The version line on the title screen is red again, the same red as DEMO RECORDING, instead of orange.
+- **Autoselect Once Switches When Dry**
+With Autoselect only once on, running out of missiles and dropping to smart mines no longer blocks the switch to a missile you pick up.
