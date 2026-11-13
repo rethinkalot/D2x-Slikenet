@@ -7,7 +7,12 @@
 - **Up to 90 packets per second.** The Packets Per Second setting (10-90) now holds its target even when frames run late.
 - **Up to 360 FPS.** Higher frame rates are supported, with smoothing so motion stays fluid between network updates.
 - **Better NAT behavior.** Joiners connect out to lower-numbered players and the host. Observers connect to the host only. Each connection is set up with a token-checked handshake.
-- **Link status on screen.** At the start of a match the HUD tells you, per player, "SLikeNet Peer Link Success" or "SLikeNet Peer Link Failure". A failure means that player's traffic is using plain UDP on the same port.
+- **Link Status In Everyone's Chat**
+Each player's SLikeNet link results show on their HUD and in every player's chat, starting with "SLikeNet Link Success: name" when a link comes up.
+- **Link Failure Reasons**
+"Link Failure:name reason" says why a link didn't come up: no dial, no reply, no hello, full or no lane. Traffic with that player uses plain UDP.
+- **Link Drop Warning**
+"Peer Link Dropped:name" shows when a working link goes down mid-game while that player is still in it.
 - **Clear failure if the port is busy.** SLikeNet retries the port 10 times, 50 ms apart. If it still can't bind, hosting or joining fails instead of quietly running without it.
 - **Pausing is safe.** Nobody is dropped for going quiet. A host or player sitting in a menu, paused or inactive stays in the game for as long as they like. A player whose reliable-packet queue fills up without ever acknowledging can still be dropped.
 - **Smoother ships.** Other players' ships are drawn between two real updates, with nothing guessed, about 1.5 packet intervals behind (16.7 ms at 90 PPS; co-op timing uses 60 PPS). The smoothing is applied again after physics each frame. They won't glide through walls or closed doors, and a ship crossing a segment border no longer snaps ahead.
@@ -16,12 +21,20 @@
 - **Anti-cheat.** Only the original Descent data files (checked by HAM hash) are allowed online. Unsupported files stop you hosting or joining.
 - **Crash fix.** Leaving a game and rejoining manually no longer crashes.
 - **Version bump.** Multiplayer protocol 30006. Older builds can't join games from this version.
+- **Rejoining Players Link Again**
+A player who rejoins into a lower player slot gets a SLikeNet link to every player again, instead of staying on plain UDP with the higher-numbered ones.
+- **Separate Game, Host And Join Ports**
+-udp_gameport is the port the LAN game list searches on and Join Manually's game port, -udp_hostport is the port you host on, and -udp_myport is the port you join from. All default to 42424.
+- **Join Manually Remembers Game Port**
+A game port you type in Join Manually is saved and used again next time, including for the LAN game list.
 
 ## Running several copies on one PC
 
 - **`proxy.cfg`.** Put a file named `proxy.cfg` next to the game with one line, `bind_ip=127.0.0.2`. That copy binds its game and broadcast sockets to that address instead of all addresses. An invalid address shows a red warning and falls back to all addresses.
 - **One port for all.** Give each copy its own address (`127.0.0.2`, `127.0.0.3`, ...) and they can all use port 42424.
 - **No background slowdown.** Windows 11 no longer slows down a game window sitting behind another one.
+- **Link Failure Test Switch**
+Start a copy with -slikenet_nolink and it refuses every SLikeNet link while still playing over plain UDP, so the other players see Link Failure with a reason. Failures can't happen between copies on one PC otherwise.
 
 ## Observers
 
@@ -72,6 +85,8 @@ Full screen keeps FPS, DEMO, RTA, IGT and velocity stacked above the weapon rows
 Alt HUD #1 shows a single G: or V: ammo line for the selected gun instead of two, and Alt HUD #2 no longer draws ammo over the laser level.
 - **Velocity Without ROT**
 The velocity meter drops the rotation readout.
+- **-notitles Works**
+Skips the intro movies, title screens and the exit order screen, like in D1.
 
 ## BugFixes
 
@@ -115,3 +130,5 @@ Typed single-player cheat codes work again. The frametime check was eating every
 The version line on the title screen is red again, the same red as DEMO RECORDING, instead of orange.
 - **Autoselect Once Switches When Dry**
 With Autoselect only once on, running out of missiles and dropping to smart mines no longer blocks the switch to a missile you pick up.
+- **No Popup For Missing D1 Files**
+Hosting or playing a D1 map without descent.hog or descent.pig no longer opens a warning window. The note goes to gamelog.txt and the game carries on.
