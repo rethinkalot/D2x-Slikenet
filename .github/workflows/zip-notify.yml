@@ -2,7 +2,7 @@ name: Zip notify
 on:
   push:
     branches: [D2-SlikeNet-WorkBranch]
-    paths: ['download/*.zip']
+    paths: ['download/D2x-Redux-SLikeNet.zip']
 jobs:
   notify:
     runs-on: ubuntu-latest
