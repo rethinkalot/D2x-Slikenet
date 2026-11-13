@@ -132,3 +132,11 @@ The version line on the title screen is red again, the same red as DEMO RECORDIN
 With Autoselect only once on, running out of missiles and dropping to smart mines no longer blocks the switch to a missile you pick up.
 - **No Popup For Missing D1 Files**
 Hosting or playing a D1 map without descent.hog or descent.pig no longer opens a warning window. The note goes to gamelog.txt and the game carries on.
+- **Bad Packets Can't Corrupt Memory**
+Network messages with an impossible player number are ignored instead of writing outside the game's player lists.
+- **Failed Joins Clear Themselves**
+A player who starts joining but never arrives (wrong level file, crash, closed game) is removed for everyone after 20 seconds, so they don't stay listed and the next player can join.
+- **No Crash On Exit**
+Closing the game no longer crashes in OpenGL, so the last gamelog lines are kept.
+- **Right Names In The Memlog**
+Closing the game window after leaving no longer writes a second memlog with your own name in place of the host's.
