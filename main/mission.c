@@ -750,7 +750,7 @@ int load_mission(mle *mission)
 	// for Descent 1 missions, load descent.hog
 	if (EMULATING_D1) {
 		if (!PHYSFSX_contfile_init("descent.hog", 1))
-			Warning("descent.hog not available, this mission may be missing some files required for briefings and exit sequence\n");
+			con_printf(CON_URGENT, "descent.hog not available, this mission may be missing some files required for briefings and exit sequence\n"); // gamelog only, no popup
 		if (!d_stricmp(Current_mission_filename, D1_MISSION_FILENAME))
 			return load_mission_d1();
 	}

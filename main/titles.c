@@ -190,6 +190,13 @@ void show_titles(void)
 
 #define MOVIE_REQUIRED 1	//(!is_D2_OEM && !is_SHAREWARE && !is_MAC_SHARE)	// causes segfault
 
+	// -notitles, as in D1: skip every intro movie and title screen, just start the title song
+	if (GameArg.SysNoTitles)
+	{
+		songs_play_song( SONG_TITLE, 1 );
+		return;
+	}
+
 	{       //show bundler screens
 		played=MOVIE_NOT_PLAYED;        //default is not played
 
@@ -283,6 +290,9 @@ void show_order_form()
 {
 #ifndef EDITOR
 	char    exit_screen[PATH_MAX];
+
+	if (GameArg.SysNoTitles)
+		return;
 
 	key_flush();
 

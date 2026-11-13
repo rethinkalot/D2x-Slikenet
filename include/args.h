@@ -50,6 +50,7 @@ typedef struct Arg
 	int SysNoBorders;
 	int SysAutoDemo;
 	int SysNoMovies;
+	int SysNoTitles;
 	int CtlNoCursor;
 	int CtlNoMouse;
 	int CtlNoJoystick;
@@ -67,6 +68,8 @@ typedef struct Arg
 	const char *MplUdpHostAddr;
 	int MplUdpHostPort;
 	int MplUdpMyPort;
+	int MplUdpGamePort;
+	int MplSlikenetNoLink;
 #ifdef USE_TRACKER
 	const char *MplTrackerAddr;
 	int MplTrackerPort;

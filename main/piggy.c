@@ -1886,7 +1886,7 @@ void load_d1_bitmap_replacements()
 
 #define D1_PIG_LOAD_FAILED "Failed loading " D1_PIGFILE
 	if (!d1_Piggy_fp) {
-		Warning(D1_PIG_LOAD_FAILED);
+		con_printf(CON_URGENT, D1_PIG_LOAD_FAILED "\n"); // gamelog only, no popup
 		return;
 	}
 
@@ -2001,7 +2001,7 @@ bitmap_index read_extra_bitmap_d1_pig(char *name)
 
 		if (!d1_Piggy_fp)
 		{
-			Warning(D1_PIG_LOAD_FAILED);
+			con_printf(CON_URGENT, D1_PIG_LOAD_FAILED "\n"); // gamelog only, no popup
 			return bitmap_num;
 		}
 
