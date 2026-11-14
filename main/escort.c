@@ -1693,7 +1693,7 @@ int escort_menu_handler(window *wind, d_event *event, escort_menu *menu)
 			return escort_menu_keycommand(wind, event, menu);
 			
 		case EVENT_IDLE:
-			timer_delay2(50);
+			menu_frame_delay();
 			break;
 			
 		case EVENT_WINDOW_DRAW:

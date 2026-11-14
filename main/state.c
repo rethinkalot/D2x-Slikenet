@@ -1670,7 +1670,8 @@ int state_restore_all_sub(char *filename, int secret_restore)
 		object restore_objects[MAX_PLAYERS];
 		int coop_got_nplayers = 0;
 
-		for (i = 0; i < MAX_PLAYERS; i++) 
+		memset(restore_players, 0, sizeof(restore_players)); // fields the save doesn't hold start at 0, not stack garbage
+		for (i = 0; i < MAX_PLAYERS; i++)
 		{
 			player_rw *pl_rw;
 			object *obj;
@@ -1703,9 +1704,13 @@ int state_restore_all_sub(char *filename, int secret_restore)
 				{
 					object *obj;
 					int sav_objnum = Players[i].objnum;
-					
+					sbyte sav_primary = Players[i].primary_weapon, sav_secondary = Players[i].secondary_weapon;
+
 					memcpy(&Players[i], &restore_players[j], sizeof(player));
 					Players[i].objnum = sav_objnum;
+					// the selected weapons aren't in the stored player; keep the current ones
+					Players[i].primary_weapon = sav_primary;
+					Players[i].secondary_weapon = sav_secondary;
 					
 					coop_player_got[i] = 1;
 					coop_got_nplayers++;
@@ -1750,6 +1755,10 @@ int state_restore_all_sub(char *filename, int secret_restore)
 			if (!coop_player_got[i] && Players[i].connected == CONNECT_PLAYING)
 				multi_disconnect_player(i);
 		Viewer = ConsoleObject = &Objects[Players[Player_num].objnum]; // make sure Viewer and ConsoleObject are set up (which we skipped by not using InitPlayerObject but we need since objects changed while loading)
+		// multi_reset_player_object() above treated our own ship like a remote one and cleared its roll,
+		// auto-level and idle bounce; give them back, as InitPlayerObject would
+		if (!is_observer())
+			ConsoleObject->mtype.phys_info.flags |= PF_TURNROLL | PF_LEVELLING | PF_WIGGLE | PF_USES_THRUST;
 		special_reset_objects(); // since we juggeled around with objects to remap coop players rebuild the index of free objects
 	}
 

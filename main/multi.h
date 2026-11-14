@@ -60,7 +60,7 @@ extern int multi_protocol; // set and determinate used protocol
 #define MULTI_PROTO_UDP 1 // UDP protocol
 
 // What version of the multiplayer protocol is this? Increment each time something drastic changes in Multiplayer without the version number changes. Can be reset to 0 each time the version of the game changes
-#define MULTI_PROTO_VERSION 30006 // Redux 1.1 + SLikeNet in-game transport
+#define MULTI_PROTO_VERSION 30006 // Redux 1.1 + SLikeNet in-game transport + host Change Map message
 
 // PROTOCOL VARIABLES AND DEFINES - END
 
@@ -146,6 +146,7 @@ extern int multi_protocol; // set and determinate used protocol
 	VALUE(MULTI_REPAIR               , 11)  \
 	VALUE(MULTI_SHIP_STATUS          , 44)  \
 	VALUE(MULTI_CREATE_EXPLOSION2    , 24)  \
+	VALUE(MULTI_CHANGE_MAP           , 13)  /* host's Change Map: pnum, mission file name (9), level, change id */ \
 	AFTER
 for_each_multiplayer_command(enum {, define_multiplayer_command, });
 
@@ -350,6 +351,12 @@ int get_color_for_player(int id, int missile);
 int get_color_for_team(int team);
 void multi_reset_object_texture(object* objp);
 void multi_send_obs_update(ubyte event, ubyte event_data);
+// Host "Change Map" from the in-game Esc menu
+void multi_change_map_start(void);
+int multi_change_map_frame(void);
+int multi_change_map_busy(void);
+void multi_change_map_reset(void);
+void multi_do_change_map(const ubyte *buf);
 void multi_send_ship_status_for_frame();
 bool is_observing_player();
 bool object_is_observer(object* obj);
