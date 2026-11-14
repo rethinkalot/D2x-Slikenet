@@ -87,6 +87,14 @@ Alt HUD #1 shows a single G: or V: ammo line for the selected gun instead of two
 The velocity meter drops the rotation readout.
 - **-notitles Works**
 Skips the intro movies, title screens and the exit order screen, like in D1.
+- **Laser Key Steps Down**
+With Laser 5 or 6, pressing the laser key while on lasers drops one level (6 to 5, or 5 to 4) and back again. Switching to lasers from another gun always picks your highest laser.
+- **Original D1 Weapons: Laser Ladder**
+Lasers 1 to 6 do 10, 10.5, 11, 11.5, 11.5 and 12.5 damage. Laser 5 fires 5% faster and Laser 6 shots fly 5% faster.
+- **Original D1 Weapons: D1 Homing**
+Homing missiles lock on at D1's wider angle, ignore enemy mines and last 20 seconds, and Megas fire every half second. On Ace and Insane, robot homing missiles, megas and smart blobs use D1's damage.
+- **Weak Gauss Push And Fireball**
+With Disable Gauss Splash on, Gauss hits give a small push and show their fireball on ships, without splash damage to anyone.
 
 ## BugFixes
 
