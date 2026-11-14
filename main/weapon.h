@@ -179,6 +179,12 @@ extern ubyte Secondary_last_was_super[MAX_SECONDARY_WEAPONS];
 extern void auto_select_weapon(int weapon_type);        //parm is primary or secondary
 extern void select_weapon(int weapon_num, int secondary_flag, int print_message,int wait_for_rearm);
 
+// Laser key on lasers with Laser 5 or 6: step down one level. player_laser_fire_level() is the level you
+// fire (and the HUD shows); Players[].laser_level stays the level you own.
+extern int Laser_lowered_from;
+extern int player_laser_fire_level(void);
+extern int laser_level_shown(int pnum);
+
 extern const char *const Primary_weapon_names_short[];
 extern const char *const Secondary_weapon_names_short[];
 extern const char *const Primary_weapon_names[];

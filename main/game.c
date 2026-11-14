@@ -609,8 +609,12 @@ void calc_game_time()
 	GameTime64 += FrameTime;
 
 	// CED -- Something's busted with the D2 code.  Here's D1.
-	fix D1_MIN_TRACKABLE = (3 * F1_0) / 4; 
-	Min_trackable_dot = 3*(F1_0 - D1_MIN_TRACKABLE)/4 + D1_MIN_TRACKABLE;
+	// With "Original D1 Weapons" the value set by set_homing_update_rate() is left alone: it already
+	// follows D1's formula, including the Homing rate.
+	if (!using_original_d1_weapons()) {
+		fix D1_MIN_TRACKABLE = (3 * F1_0) / 4;
+		Min_trackable_dot = 3*(F1_0 - D1_MIN_TRACKABLE)/4 + D1_MIN_TRACKABLE;
+	}
 
 
 	calc_d_tick();

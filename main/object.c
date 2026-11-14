@@ -2666,12 +2666,17 @@ void set_homing_update_rate(int update_rate) {
 
 	//	Set value to determine whether homing missile can see target.
 	//	The lower frametime is, the more likely that it can see its target.
-	if (idealHomerFrameTime <= F1_0/16)
-		Min_trackable_dot = 3*(F1_0 - MIN_TRACKABLE_DOT)/4 + MIN_TRACKABLE_DOT;
-	else if (idealHomerFrameTime < F1_0/4)
-		Min_trackable_dot = fixmul(F1_0 - MIN_TRACKABLE_DOT, F1_0-4*idealHomerFrameTime) + MIN_TRACKABLE_DOT;
-	else
-		Min_trackable_dot = MIN_TRACKABLE_DOT;
+	//	"Original D1 Weapons" uses D1's base cone, so the keep-lock cone follows the Homing rate exactly as in D1.
+	{
+		fix min_dot = using_original_d1_weapons() ? D1_MIN_TRACKABLE_DOT : MIN_TRACKABLE_DOT;
+
+		if (idealHomerFrameTime <= F1_0/16)
+			Min_trackable_dot = 3*(F1_0 - min_dot)/4 + min_dot;
+		else if (idealHomerFrameTime < F1_0/4)
+			Min_trackable_dot = fixmul(F1_0 - min_dot, F1_0-4*idealHomerFrameTime) + min_dot;
+		else
+			Min_trackable_dot = min_dot;
+	}
 
 	con_printf(CON_DEBUG, "Homing update rate: %d\n", update_rate);
 }

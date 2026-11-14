@@ -1164,7 +1164,7 @@ void hud_show_weapons_mode(int type,int vertical,int x,int y){
 				case 0:
 					sprintf(weapon_str,"%c%i",
 						(Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS)?'Q':'L',
-						Players[pnum].laser_level+1);
+						laser_level_shown(pnum)+1);
 					break;
 				case 1:
 					//sprintf(weapon_str,"V%i", f2i((unsigned int)Players[pnum].primary_ammo[1] * VULCAN_AMMO_SCALE));
@@ -1355,9 +1355,9 @@ void hud_show_weapons(void)
 		switch (Players[pnum].primary_weapon) {
 			case LASER_INDEX:
 				if (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS)
-					sprintf(weapon_str, "%s %s %i", TXT_QUAD, weapon_name, Players[pnum].laser_level+1);
+					sprintf(weapon_str, "%s %s %i", TXT_QUAD, weapon_name, laser_level_shown(pnum)+1);
 				else
-					sprintf(weapon_str, "%s %i", weapon_name, Players[pnum].laser_level+1);
+					sprintf(weapon_str, "%s %i", weapon_name, laser_level_shown(pnum)+1);
 				disp_primary_weapon_name = weapon_str;
 				break;
 
@@ -1973,7 +1973,7 @@ void draw_weapon_info_sub(int info_index,gauge_box *box,int pic_x,int pic_y,char
 		//	For laser, show level and quadness
 		if (info_index == LASER_ID || info_index == SUPER_LASER_ID)
 		{
-			gr_printf(text_x,text_y+LINE_SPACING, "%s: %i", TXT_LVL, Players[pnum].laser_level+1);
+			gr_printf(text_x,text_y+LINE_SPACING, "%s: %i", TXT_LVL, laser_level_shown(pnum)+1);
 			if (Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS)
 				gr_string(text_x,text_y+(LINE_SPACING*2), TXT_QUAD);
 		}
@@ -2059,7 +2059,7 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 
 	gr_set_curfont( GAME_FONT );
 
-	laser_level_changed = (weapon_type==0 && weapon_num==LASER_INDEX && (Players[pnum].laser_level != old_laser_level));
+	laser_level_changed = (weapon_type==0 && weapon_num==LASER_INDEX && (laser_level_shown(pnum) != old_laser_level));
 
 	if ((weapon_num != old_weapon[weapon_type] || laser_level_changed) && weapon_box_states[weapon_type] == WS_SET && (old_weapon[weapon_type] != -1) && !PlayerCfg.HudMode)
 	{
@@ -2069,7 +2069,7 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 
 	if (old_weapon[weapon_type] == -1)
 	{
-		draw_weapon_info(weapon_type,weapon_num,Players[pnum].laser_level);
+		draw_weapon_info(weapon_type,weapon_num,laser_level_shown(pnum));
 		old_weapon[weapon_type] = weapon_num;
 		weapon_box_states[weapon_type] = WS_SET;
 	}
@@ -2080,7 +2080,7 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 		if (weapon_box_fade_values[weapon_type] <= 0) {
 			weapon_box_states[weapon_type] = WS_FADING_IN;
 			old_weapon[weapon_type] = weapon_num;
-			old_laser_level = Players[pnum].laser_level;
+			old_laser_level = laser_level_shown(pnum);
 			weapon_box_fade_values[weapon_type] = 0;
 		}
 	}
@@ -2089,7 +2089,7 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 			weapon_box_states[weapon_type] = WS_FADING_OUT;
 		}
 		else {
-			draw_weapon_info(weapon_type,weapon_num,Players[pnum].laser_level);
+			draw_weapon_info(weapon_type,weapon_num,laser_level_shown(pnum));
 			weapon_box_fade_values[weapon_type] += FrameTime * FADE_SCALE;
 			if (weapon_box_fade_values[weapon_type] >= i2f(GR_FADE_LEVELS-1)) {
 				weapon_box_states[weapon_type] = WS_SET;
@@ -2098,9 +2098,9 @@ void draw_weapon_box(int weapon_type,int weapon_num)
 		}
 	} else
 	{
-		draw_weapon_info(weapon_type, weapon_num, Players[pnum].laser_level);
+		draw_weapon_info(weapon_type, weapon_num, laser_level_shown(pnum));
 		old_weapon[weapon_type] = weapon_num;
-		old_laser_level = Players[pnum].laser_level;
+		old_laser_level = laser_level_shown(pnum);
 	}
 
 	if (weapon_box_states[weapon_type] != WS_SET)		//fade gauge
@@ -3023,7 +3023,7 @@ int observer_draw_player_card(int pnum, int color, int x, int y) {
 			switch (Players[pnum].primary_weapon) {
 			case 0:
 				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "%s %i",
-					(Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", Players[pnum].laser_level + 1);
+					(Players[pnum].flags & PLAYER_FLAGS_QUAD_LASERS) ? "QUAD" : "LASER", laser_level_shown(pnum) + 1);
 				break;
 			case 1:
 				snprintf(primary, sizeof(primary) / sizeof(primary[0]), "VUL");

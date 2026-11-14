@@ -6573,7 +6573,7 @@ void multi_send_ship_status_for_frame()
     // The weapon flag words are 16 bits (Phoenix and Omega are primary bits 8-9, Mercury and Earthshaker
     // secondary bits 8-9) but the packet has one byte each. laser_level is at most 5, so its top bits
     // carry the high bits of both words and the packet size stays 43.
-    multibuf[2] = (Players[Player_num].laser_level & 7)
+    multibuf[2] = (player_laser_fire_level() & 7) // the level being fired; only observers read this
         | (((Players[Player_num].primary_weapon_flags >> 8) & 3) << 3)
         | (((Players[Player_num].secondary_weapon_flags >> 8) & 3) << 5);
     PUT_INTEL_SHORT(multibuf + 3, Players[Player_num].flags);
@@ -7749,10 +7749,29 @@ void multi_object_rw_to_object(object_rw *obj_rw, object *obj)
 int multi_change_weapon_info(void)
 {
     int changed = 0;
+
+    // "Original D1 Weapons": homing weapons get D1's values (from D1's DESCENT.PIG). Player ones on every
+    // difficulty, robot ones on Ace and Insane only. Returning 1 makes the next level reload the HAM, so
+    // turning the switch off restores D2's values.
+    if (using_original_d1_weapons()) {
+        Weapon_info[HOMING_ID].lifetime = i2f(20);
+        Weapon_info[MEGA_ID].fire_wait = F1_0 / 2;
+        Weapon_info[SUPER_MECH_MISS].strength[3] = i2f(30);   // robot homing missile
+        Weapon_info[SUPER_MECH_MISS].strength[4] = i2f(49);
+        if (Difficulty_level >= 3)
+            Weapon_info[SUPER_MECH_MISS].lifetime = i2f(20);
+        Weapon_info[28].strength[3] = i2f(120);              // robot homing mega
+        Weapon_info[28].strength[4] = i2f(150);
+        Weapon_info[ROBOT_SMART_HOMING_ID].strength[3] = i2f(14);
+        Weapon_info[ROBOT_SMART_HOMING_ID].strength[4] = i2f(15);
+        Weapon_info[ROBOT_SMART_HOMING_ID].speed[3] = i2f(90);
+        changed = 1;
+    }
+
     if (!(Game_mode & GM_MULTI))
-        return 0;
+        return changed;
     if (Netgame.DisableGaussSplash) {
-        Weapon_info[GAUSS_ID].mass = F1_0 / 100;
+        Weapon_info[GAUSS_ID].mass = F1_0 / 20; // a small push (was 1/100, none to speak of); normal splash Gauss is 0.2
         Weapon_info[GAUSS_ID].damage_radius = 0;
         for (int i = 0; i < NDL; i++)
             Weapon_info[GAUSS_ID].strength[i] = i2f(12) + F0_5;

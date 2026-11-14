@@ -305,6 +305,27 @@ void CycleSecondary ()
 
 
 //	------------------------------------------------------------------------------------
+// The laser level you stepped down from with the laser key, or -1. Compared with the level you own, so
+// picking up or losing a laser level cancels the step-down by itself.
+int Laser_lowered_from = -1;
+
+int player_laser_fire_level(void)
+{
+	int level = Players[Player_num].laser_level;
+
+	if (level > MAX_LASER_LEVEL && Laser_lowered_from == level)
+		return level - 1;
+	return level;
+}
+
+// Laser level to show for pnum: what you fire for your own ship, the owned (or reported) level for others
+int laser_level_shown(int pnum)
+{
+	if (pnum == Player_num && !is_observer() && Newdemo_state != ND_STATE_PLAYBACK)
+		return player_laser_fire_level();
+	return Players[pnum].laser_level;
+}
+
 //if message flag set, print message saying selected
 void select_weapon(int weapon_num, int secondary_flag, int print_message, int wait_for_rearm)
 {
@@ -318,6 +339,11 @@ void select_weapon(int weapon_num, int secondary_flag, int print_message, int wa
 		newdemo_record_player_weapon(secondary_flag, weapon_num);
 
 	if (!secondary_flag) {
+		// Coming to lasers from another gun always gives your highest laser
+		if ((weapon_num == LASER_INDEX || weapon_num == SUPER_LASER_INDEX) &&
+		    Players[Player_num].primary_weapon != LASER_INDEX && Players[Player_num].primary_weapon != SUPER_LASER_INDEX)
+			Laser_lowered_from = -1;
+
 		if (Players[Player_num].primary_weapon != weapon_num) {
 #ifndef FUSION_KEEPS_CHARGE
 			//added 8/6/98 by Victor Rachels to fix fusion charge bug
@@ -384,7 +410,7 @@ void select_weapon(int weapon_num, int secondary_flag, int print_message, int wa
 	if (print_message)
 	{
 		if (weapon_num == LASER_INDEX && !secondary_flag)
-			HUD_init_message(HM_DEFAULT, "%s Level %d %s", weapon_name, Players[Player_num].laser_level+1, TXT_SELECTED);
+			HUD_init_message(HM_DEFAULT, "%s Level %d %s", weapon_name, player_laser_fire_level()+1, TXT_SELECTED);
 		else
 			HUD_init_message(HM_DEFAULT, "%s %s", weapon_name, TXT_SELECTED);
 	}
@@ -409,6 +435,19 @@ void do_weapon_select(int weapon_num, int secondary_flag)
 		current = Players[Player_num].primary_weapon;
 		last_was_super = Primary_last_was_super[weapon_num];
 		has_flag = HAS_WEAPON_FLAG;
+
+		// Laser key while already on lasers, owning Laser 5 or 6: toggle between your highest laser and
+		// one level below (6<->5, or 5<->4). With Laser 4 or lower this key does what it always did.
+		if (weapon_num == LASER_INDEX && (current == LASER_INDEX || current == SUPER_LASER_INDEX) &&
+		    Players[Player_num].laser_level > MAX_LASER_LEVEL && Objects[Players[Player_num].objnum].type != OBJ_GHOST)
+		{
+			Laser_lowered_from = (Laser_lowered_from == Players[Player_num].laser_level) ? -1 : Players[Player_num].laser_level;
+			digi_play_sample_once( SOUND_GOOD_SELECTION_PRIMARY, F1_0 );
+			HUD_init_message(HM_DEFAULT, "%s Level %d %s", PRIMARY_WEAPON_NAMES(weapon_num), player_laser_fire_level()+1, TXT_SELECTED);
+			if (Game_mode & GM_MULTI)
+				multi_send_ship_status();
+			return;
+		}
 	}
 	else {
 		current = Players[Player_num].secondary_weapon;

@@ -74,7 +74,7 @@ int find_homing_object(vms_vector *curpos, object *tracker);
 // never diverge from the host's simulation.
 // Single-player: the Misc Options "Original D1 Weapons (SP)" checkbox,
 // applied on the fly.
-static int using_original_d1_weapons(void)
+int using_original_d1_weapons(void)
 {
 	if (Game_mode & GM_MULTI)
 		return Netgame.OriginalD1Weapons;
@@ -707,14 +707,20 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 
 	obj->shields = Weapon_info[obj->id].strength[Difficulty_level];
 	if( using_original_d1_weapons()) {
+		// Laser ladder 10, 10.5, 11, 11.5, 11.5, 12.5. Laser 5 also fires 5% faster (do_laser_firing_player),
+		// Laser 6 also travels 5% faster (the weapon_speed spots below)
 		if(obj->id == LASER_ID_L1) {        // Laser 1
-			obj->shields = 10 * F1_0; 
+			obj->shields = 10 * F1_0;
 		} else if(obj->id == LASER_ID_L2) { // Laser 2
-			obj->shields = 11 * F1_0; 
+			obj->shields = 10 * F1_0 + F1_0/2;
 		} else if(obj->id == LASER_ID_L3) { // Laser 3
-			obj->shields = 12 * F1_0; 
-		} else if(obj->id == LASER_ID_L4 || obj->id == LASER_ID_L5 || obj->id == LASER_ID_L6) { // Laser 4
-			obj->shields = 13 * F1_0; 
+			obj->shields = 11 * F1_0;
+		} else if(obj->id == LASER_ID_L4) { // Laser 4
+			obj->shields = 11 * F1_0 + F1_0/2;
+		} else if(obj->id == LASER_ID_L5) { // Laser 5
+			obj->shields = 11 * F1_0 + F1_0/2;
+		} else if(obj->id == LASER_ID_L6) { // Laser 6
+			obj->shields = 12 * F1_0 + F1_0/2;
 		} else if(obj->id == SPREADFIRE_ID) { // Spread
 			obj->shields = 10 * F1_0; 
 		} else if(obj->id == FUSION_ID) { // Fusion
@@ -839,8 +845,10 @@ int Laser_create_new( vms_vector * direction, vms_vector * position, int segnum,
 
 	if( using_original_d1_weapons()) {
 		if(obj->id == SPREADFIRE_ID) { // Spread
-			weapon_speed = 200 * F1_0; 
-		} 
+			weapon_speed = 200 * F1_0;
+		} else if(obj->id == LASER_ID_L6) { // Laser 6 travels 5% faster
+			weapon_speed = fixmuldiv(weapon_speed, 21, 20);
+		}
 	}
 
 	vm_vec_copy_scale( &obj->mtype.phys_info.velocity, direction, weapon_speed + parent_speed );
@@ -1016,7 +1024,7 @@ int find_homing_object(vms_vector *curpos, object *tracker)
 	else {
 		int	cur_min_trackable_dot;
 
-		cur_min_trackable_dot = MIN_TRACKABLE_DOT;
+		cur_min_trackable_dot = using_original_d1_weapons() ? D1_MIN_TRACKABLE_DOT : MIN_TRACKABLE_DOT;
 		if ((tracker->type == OBJ_WEAPON) && (tracker->id == OMEGA_ID))
 			cur_min_trackable_dot = OMEGA_MIN_TRACKABLE_DOT;
 
@@ -1120,7 +1128,7 @@ int find_homing_object_complete(vms_vector *curpos, object *tracker, int track_o
 	Assert((Weapon_info[tracker->id].homing_flag) || (tracker->id == OMEGA_ID));
 
 	max_trackable_dist = MAX_TRACKABLE_DIST;
-	min_trackable_dot = MIN_TRACKABLE_DOT;
+	min_trackable_dot = using_original_d1_weapons() ? D1_MIN_TRACKABLE_DOT : MIN_TRACKABLE_DOT;
 
 	if (tracker->id == OMEGA_ID) {
 		max_trackable_dist = OMEGA_MAX_TRACKABLE_DIST;
@@ -1176,8 +1184,11 @@ int find_homing_object_complete(vms_vector *curpos, object *tracker, int track_o
 		if (dist < max_trackable_dist) {
 			vm_vec_normalize(&vec_to_curobj);
 			dot = vm_vec_dot(&vec_to_curobj, &tracker->orient.fvec);
-			if (is_proximity)
+			if (is_proximity) {
+				if (using_original_d1_weapons())
+					continue;		//	D1 homers never lock on to enemy mines (D1 laser.c)
 				dot = ((dot << 3) + dot) >> 3;		//	I suspect Watcom would be too stupid to figure out the obvious...
+			}
 
 			//	Note: This uses the constant, not-scaled-by-frametime value, because it is only used
 			//	to determine if an object is initially trackable.  find_homing_object is called on subsequent
@@ -1295,8 +1306,10 @@ void Laser_player_fire_spread_delay(object *obj, int laser_type, int gun_num, fi
 	fix weapon_speed = Weapon_info[laser_type].speed[Difficulty_level];
 	if( using_original_d1_weapons()) {
 		if(laser_type == SPREADFIRE_ID) { // Spread
-			weapon_speed = 200 * F1_0; 
-		} 
+			weapon_speed = 200 * F1_0;
+		} else if(laser_type == LASER_ID_L6) { // Laser 6 travels 5% faster
+			weapon_speed = fixmuldiv(weapon_speed, 21, 20);
+		}
 	}
 
 	//	If supposed to fire at a delayed time (delay_time), then move this point backwards.
@@ -1645,8 +1658,10 @@ void Laser_do_weapon_sequence(object *obj, int doHomerFrame, fix idealHomerFrame
 		fix max_weapon_speed = Weapon_info[obj->id].speed[Difficulty_level];
 		if( using_original_d1_weapons()) {
 			if(obj->id == SPREADFIRE_ID) { // Spread
-				max_weapon_speed = 200 * F1_0; 
-			} 
+				max_weapon_speed = 200 * F1_0;
+			} else if(obj->id == LASER_ID_L6) { // Laser 6 travels 5% faster
+				max_weapon_speed = fixmuldiv(max_weapon_speed, 21, 20);
+			}
 		}
 
 		weapon_speed = vm_vec_mag_quick(&obj->mtype.phys_info.velocity);
@@ -1712,12 +1727,18 @@ void do_laser_firing_player(void)
 
                         Last_laser_fired_time = GameTime64;
 
-			if (!cheats.rapidfire)
-				Next_laser_fire_time = GameTime64 + Weapon_info[weapon_index].fire_wait - fire_frame_overhead;
-			else
+			if (!cheats.rapidfire) {
+				fix fire_wait = Weapon_info[weapon_index].fire_wait;
+
+				// "Original D1 Weapons": Laser 5 fires 5% faster (0.25 s -> about 0.238 s)
+				if (using_original_d1_weapons() && Players[Player_num].primary_weapon == LASER_INDEX && player_laser_fire_level() == MAX_LASER_LEVEL+1)
+					fire_wait = fixmuldiv(fire_wait, 20, 21);
+
+				Next_laser_fire_time = GameTime64 + fire_wait - fire_frame_overhead;
+			} else
 				Next_laser_fire_time = GameTime64 + (F1_0/25) - fire_frame_overhead;
 
-			laser_level = Players[Player_num].laser_level;
+			laser_level = player_laser_fire_level();	// one below your highest if you stepped down with the laser key
 
 			flags = 0;
 

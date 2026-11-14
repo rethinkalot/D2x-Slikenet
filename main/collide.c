@@ -409,6 +409,14 @@ void collide_player_and_wall( object * playerobj, fix hitspeed, short hitseg, sh
 fix64	Last_volatile_scrape_sound_time = 0;
 
 void collide_weapon_and_wall( object * weapon, fix hitspeed, short hitseg, short hitwall, vms_vector * hitpt);
+
+// "Disable Gauss Splash": a Gauss hit on a ship, reactor or debris still shows the fireball the splash
+// Gauss draws, as a picture only (no damage, no push). Walls and robots already draw this same fireball.
+static void maybe_gauss_fireball(object *weapon, vms_vector *pos)
+{
+	if (weapon->id == GAUSS_ID && (Game_mode & GM_MULTI) && Netgame.DisableGaussSplash && !Weapon_info[GAUSS_ID].damage_radius)
+		object_create_explosion(weapon->segnum, pos, Weapon_info[GAUSS_ID].impact_size, Weapon_info[GAUSS_ID].robot_hit_vclip);
+}
 void collide_debris_and_wall( object * debris, fix hitspeed, short hitseg, short hitwall, vms_vector * hitpt);
 
 //see if wall is volatile or water
@@ -1221,8 +1229,10 @@ void collide_weapon_and_controlcen( object * weapon, object *controlcen, vms_vec
 
 		if ( Weapon_info[weapon->id].damage_radius )
 			explode_badass_weapon(weapon,collision_point);
-		else
+		else {
 			object_create_explosion( controlcen->segnum, collision_point, controlcen->size*3/20, VCLIP_SMALL_EXPLOSION );
+			maybe_gauss_fireball(weapon, collision_point);
+		}
 
 		digi_link_sound_to_pos( SOUND_CONTROL_CENTER_HIT, controlcen->segnum, 0, collision_point, 0, F1_0 );
 
@@ -2397,6 +2407,8 @@ void collide_player_and_weapon( object * playerobj, object * weapon, vms_vector 
 		explode_badass_weapon(weapon,collision_point);
 
 	}
+	else
+		maybe_gauss_fireball(weapon, collision_point);
 
 	maybe_kill_weapon(weapon,playerobj);
 
@@ -2699,6 +2711,8 @@ void collide_weapon_and_debris( object * weapon, object * debris, vms_vector *co
 		explode_object(debris,0);
 		if ( Weapon_info[weapon->id].damage_radius )
 			explode_badass_weapon(weapon,collision_point);
+		else
+			maybe_gauss_fireball(weapon, collision_point);
 		maybe_kill_weapon(weapon,debris);
 		if (!(weapon->mtype.phys_info.flags & PF_PERSISTENT))
 			weapon->flags |= OF_SHOULD_BE_DEAD;
