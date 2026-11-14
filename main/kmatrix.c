@@ -368,8 +368,9 @@ int kmatrix_handler(window *wind, d_event *event, kmatrix_screen *km)
 					}
 				}
 
-				Netgame.numobservers = 0;
-				
+				// numobservers is not reset here: observers keep their slots across maps, and zeroing
+				// the count hid them from the HUD list while they were still in the game
+
 				if (window_exists(wind))
 					window_close(wind);
 				break;

@@ -41,6 +41,7 @@
 #include "newdemo.h"
 #include "multibot.h"
 #include "wall.h"
+#include "switch.h"
 #include "bm.h"
 #include "effects.h"
 #include "physics.h"
@@ -1035,6 +1036,23 @@ int is_observer_ip(struct _sockaddr addr) {
     return 0;
 }
 
+// Host: the observer slot already held by this address (joined, or mid-join), or -1
+static int net_udp_observer_slot(struct _sockaddr *addr) {
+    for (int i = 0; i < Netgame.max_numobservers; i++)
+        if (Netgame.observers[i].protocol.udp.addr.sin_port != 0 && is_same_addr(&Netgame.observers[i].protocol.udp.addr, addr))
+            return i;
+    return -1;
+}
+
+// Host: numobservers is only ever set from the slots, so it can't drift from them (or wrap below 0 to 255)
+static void net_udp_recount_observers(void) {
+    int n = 0;
+    for (int i = 0; i < Netgame.max_numobservers; i++)
+        if (Netgame.observers[i].connected == 1)
+            n++;
+    Netgame.numobservers = n;
+}
+
 int is_any_player_ip(struct _sockaddr addr) {
     for(int i = 0; i < MAX_PLAYERS; i++) {
         if(Players[i].connected == CONNECT_DISCONNECTED) continue;
@@ -1658,7 +1676,8 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
     }
 
     if(their->player.observer) {
-        if(Netgame.numobservers >= Netgame.max_numobservers) {
+        // An observer coming back (new map, rejoin) still has its slot, so it isn't refused as full
+        if(net_udp_observer_slot(&their->player.protocol.udp.addr) < 0 && Netgame.numobservers >= Netgame.max_numobservers) {
             net_udp_dump_player(their->player.protocol.udp.addr, their->token, DUMP_FULL);
             return;
         }
@@ -1669,12 +1688,15 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
     Network_player_added = 0;
 
     if(their->player.observer) {
-        Netgame.numobservers++;
+        // Reuse this observer's own slot; a second slot with the same address doubled its name on
+        // the HUD and sent it every packet twice
+        int obsnum = net_udp_observer_slot(&their->player.protocol.udp.addr);
 
-        int obsnum = 0;
-
-        while (Netgame.observers[obsnum].connected == 1) {
-            obsnum++;
+        if (obsnum < 0) {
+            obsnum = 0;
+            while (Netgame.observers[obsnum].connected == 1) {
+                obsnum++;
+            }
         }
 
         UDP_sync_player = *their;
@@ -1685,7 +1707,9 @@ void net_udp_welcome_player(UDP_sequence_packet *their)
         Netgame.observers[obsnum].LastPacketTime = timer_query();
         Netgame.observers[obsnum].connected = 0; // Not yet connected, see net_udp_send_rejoin_sync
         Netgame.observers[obsnum].protocol.udp.addr = their->player.protocol.udp.addr;
-        strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8); 
+        strncpy((char*) &Netgame.observers[obsnum].callsign, (char*) &their->player.callsign, 8);
+        net_udp_recount_observers();
+        Netgame.numobservers++; // this one, still joining
 
         HUD_init_message(HM_MULTI, "%s is now observing.", UDP_sync_player.player.callsign);
 
@@ -1830,6 +1854,16 @@ int net_udp_objnum_is_past(int objnum)
         return 0;
 }
 
+// Add one game message to the shared buffer, sending it as a reliable packet whenever it fills, so a
+// joiner's level state goes out in a few acknowledged packets instead of one packet per message.
+static void net_udp_join_state_add(const ubyte *msg, int len)
+{
+    if (UDP_MData.mbuf_size + len > UPID_MDATA_BUF_SIZE)
+        net_udp_send_mdata(1, timer_query());
+    memcpy(&UDP_MData.mbuf[UDP_MData.mbuf_size], msg, len);
+    UDP_MData.mbuf_size += len;
+}
+
 void net_udp_send_door_updates(void)
 {
     // Send door status when new player joins
@@ -1838,15 +1872,59 @@ void net_udp_send_door_updates(void)
 
     for (i = 0; i < Num_walls; i++)
     {
-        if ((Walls[i].type == WALL_DOOR) && ((Walls[i].state == WALL_DOOR_OPENING) || (Walls[i].state == WALL_DOOR_WAITING)))
-            multi_send_door_open(Walls[i].segnum, Walls[i].sidenum,0);
+        // The door's real flags go out (0 used to wipe the receivers' lock and auto-close bits), and doors
+        // that stay open for good (WALL_DOOR_OPEN) are included so a joiner doesn't see them shut
+        if ((Walls[i].type == WALL_DOOR) && ((Walls[i].state == WALL_DOOR_OPENING) || (Walls[i].state == WALL_DOOR_WAITING) || (Walls[i].state == WALL_DOOR_OPEN)))
+            multi_send_door_open(Walls[i].segnum, Walls[i].sidenum, Walls[i].flags);
         else if ((Walls[i].type == WALL_BLASTABLE) && (Walls[i].flags & WALL_BLASTED))
-            multi_send_door_open(Walls[i].segnum, Walls[i].sidenum,0);
+            multi_send_door_open(Walls[i].segnum, Walls[i].sidenum, Walls[i].flags);
         else if ((Walls[i].type == WALL_BLASTABLE) && (Walls[i].hps != WALL_HPS))
             multi_send_hostage_door_status(i);
     }
 
-}	
+    // D2 level state a joiner (player or observer) can't know otherwise: force fields and other
+    // trigger-changed walls, used one-shot triggers, smashed lights and their broken panels.
+    // Sent to everyone (observers get it forwarded); players already in the game only get what they
+    // have. Doors are left to the door messages above, so a door someone is opening is never reset.
+    if (!Endlevel_sequence)
+    {
+        ubyte msg[18];
+        int j;
+
+        for (i = 0; i < Num_walls; i++)
+            if (Walls[i].type == WALL_OPEN || Walls[i].type == WALL_CLOSED || Walls[i].type == WALL_ILLUSION)
+            {
+                msg[0] = MULTI_WALL_STATUS;
+                PUT_INTEL_SHORT(msg + 1, i);
+                msg[3] = Walls[i].type;
+                msg[4] = Walls[i].flags;
+                msg[5] = Walls[i].state;
+                net_udp_join_state_add(msg, 6);
+            }
+
+        for (i = 0; i < Num_triggers; i++)
+            if (Triggers[i].flags & TF_DISABLED)
+            {
+                msg[0] = MULTI_START_TRIGGER;
+                msg[1] = i;
+                net_udp_join_state_add(msg, 2);
+            }
+
+        for (i = 0; i <= Highest_segment_index; i++)
+            if (Light_subtracted[i])
+            {
+                msg[0] = MULTI_LIGHT;
+                PUT_INTEL_INT(msg + 1, i);
+                msg[5] = Light_subtracted[i];
+                for (j = 0; j < 6; j++)
+                    PUT_INTEL_SHORT(msg + 6 + 2*j, Segments[i].sides[j].tmap_num2);
+                net_udp_join_state_add(msg, 18);
+            }
+
+        if (UDP_MData.mbuf_size)
+            net_udp_send_mdata(1, timer_query());
+    }
+}
 
 void net_udp_process_monitor_vector(int vector)
 {
@@ -2201,6 +2279,7 @@ void net_udp_send_rejoin_sync(int player_num)
     {
         Network_player_added = 0;
         Netgame.observers[UDP_sync_obsnum].connected = 1;
+        net_udp_recount_observers();
         multi_send_obs_update(0, UDP_sync_obsnum);
     }
     else
@@ -2254,6 +2333,13 @@ void net_udp_send_rejoin_sync(int player_num)
 
     net_udp_send_game_info(UDP_sync_player.player.protocol.udp.addr, UPID_SYNC, 1, UDP_sync_player.token);
     net_udp_send_door_updates();
+
+    // Closed doors' lock state (a switch may have unlocked one) goes to the joiner only, so it can't
+    // reset a door someone else is opening right now. Observers can't open doors.
+    if (player_num != OBSERVER_PLAYER_ID)
+        for (i = 0; i < Num_walls; i++)
+            if (Walls[i].type == WALL_DOOR && Walls[i].state == WALL_DOOR_CLOSED)
+                multi_send_wall_status_specific(player_num, i, Walls[i].type, Walls[i].flags, Walls[i].state);
 
     return;
 }
@@ -4200,7 +4286,8 @@ void net_udp_do_frame(int force, int listen)
         WaitForRefuseAnswer=0;
 
      // Send positional update either in the regular PPS interval OR if forced AND at least every 66.6ms (nice for firing)
-    if ((force && time >= (last_pdata_time+(F1_0/(Netgame.PacketsPerSec > 0 ? Netgame.PacketsPerSec : 90)))) || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))))
+    // PacketsPerSec is 0 while a manual rejoin waits for the host's settings (net_udp_init cleared Netgame): no game, no sends, and no divide by zero
+    if (Netgame.PacketsPerSec > 0 && ((force && time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec))) || (time >= (last_pdata_time+(F1_0/Netgame.PacketsPerSec)))))
     {
         // Step by the exact interval so time past the mark carries over and the average holds PacketsPerSec
         if (!force && time < last_pdata_time+(2*(F1_0/Netgame.PacketsPerSec)))
@@ -5280,7 +5367,7 @@ void check_observers(fix64 now) {
         if (Netgame.observers[i].connected == 1) {
             if(now - Netgame.observers[i].LastPacketTime > F1_0*10) {
                 memset(&Netgame.observers[i], 0, sizeof(netplayer_info));
-                Netgame.numobservers--;
+                net_udp_recount_observers();
 
                 changed_something = 1; 
             }
@@ -5992,7 +6079,7 @@ void net_udp_do_refuse_stuff (UDP_sequence_packet *their)
     ClipRank (&their->player.rank);
     
     if(their->player.observer) {
-        if(Netgame.numobservers < Netgame.max_numobservers) {
+        if(Netgame.numobservers < Netgame.max_numobservers || net_udp_observer_slot(&their->player.protocol.udp.addr) >= 0) {
             net_udp_welcome_player(their);
         } else {
             net_udp_dump_player(their->player.protocol.udp.addr, their->token, DUMP_FULL);
@@ -6190,7 +6277,7 @@ void net_udp_process_obs_quit(ubyte *data, int data_len, struct _sockaddr sender
         return;
     }
     memset(&Netgame.observers[obsnum], 0, sizeof(netplayer_info));
-    Netgame.numobservers--;
+    net_udp_recount_observers();
     multi_send_obs_update(1, 0);
 }
 

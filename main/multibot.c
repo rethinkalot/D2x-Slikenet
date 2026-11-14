@@ -364,8 +364,6 @@ multi_send_release_robot(int objnum)
     multi_send_data(multibuf, 5, 2);
 }
 
-#define MIN_ROBOT_COM_GAP F1_0/20
-
 int
 multi_send_robot_frame(int sent)
 {
@@ -797,9 +795,13 @@ multi_do_robot_fire(const ubyte *buf)
     {
         return;
     }
-    
+
+    // -1 / -2 drop a proximity / smart mine; anything else must be one of this robot's guns
+    if ((gun_num < -2) || (gun_num >= Robot_info[Objects[botnum].id].n_guns))
+        return;
+
     // Do the firing
-    
+
     if (gun_num == -1 || gun_num==-2)
     {
         // Drop proximity bombs
@@ -942,7 +944,7 @@ multi_do_create_robot(const ubyte *buf)
 
     objnum = GET_INTEL_SHORT(buf + 3);
 
-    if ((pnum < 0) || (objnum < 0) || (fuelcen_num < 0) || (fuelcen_num >= Num_fuelcenters) || (pnum >= N_players))
+    if ((pnum < 0) || (objnum < 0) || (fuelcen_num < 0) || (fuelcen_num >= Num_fuelcenters) || (pnum >= N_players) || (type >= N_robot_types))
     {
         Int3(); // Bogus data
         return;
@@ -1052,8 +1054,9 @@ void check_robot_respawns() {
             if(! player_too_close) {
                 short objnum = master_respawn_robot(i);
 
-                // Tell everyone else to do the same
-                multi_send_respawn_robot(objnum);
+                // Tell everyone else to do the same (not if the object list was full)
+                if (objnum >= 0)
+                    multi_send_respawn_robot(objnum);
             }
         }
     }
@@ -1115,17 +1118,24 @@ void multi_do_respawn_robot(const ubyte *buf) {
     size          = GET_INTEL_INT(buf + loc);      loc += 4;
     ubyte rplr    = buf[loc];                      loc += 1; 
     short robjnum = GET_INTEL_SHORT(buf + loc);    loc += 2; 
-    behavior      = buf[loc];                      loc += 1; 
+    behavior      = buf[loc];                      loc += 1;
 
-    short objnum = respawn_robot(id, segnum, pos, orient, size, behavior); 
+    if ((id >= N_robot_types) || (segnum < 0) || (segnum > Highest_segment_index))
+        return;
 
-    map_objnum_local_to_remote(objnum, robjnum, rplr); 
+    short objnum = respawn_robot(id, segnum, pos, orient, size, behavior);
+    if (objnum < 0) // object list full
+        return;
+
+    map_objnum_local_to_remote(objnum, robjnum, rplr);
 }
 
 short master_respawn_robot(short robo_id) {
-    object *robo = respawnable_bots + robo_id; 
+    object *robo = respawnable_bots + robo_id;
 
     short objnum = respawn_robot(robo->id, robo->segnum, robo->pos, robo->orient, robo->size, robo->ctype.ai_info.behavior);
+    if (objnum < 0) // object list full: stays dead, tried again next wave
+        return objnum;
 
     roboid_to_objid[robo_id] = objnum;
     robo_death_time[robo_id] = 0;
@@ -1212,7 +1222,7 @@ multi_do_boss_actions(const ubyte *buf)
                 int teleport_segnum;
                 vms_vector boss_dir;
 
-                if ((secondary < 0) || (secondary > Num_boss_teleport_segs))
+                if ((secondary < 0) || (secondary >= Num_boss_teleport_segs))
                 {
                     Int3(); // Bad segnum for boss teleport, ROB!!
                     return;
@@ -1373,7 +1383,14 @@ multi_drop_robot_powerups(int objnum)
         }
         d_srand(1245L);
         if (del_obj->contains_count > 0)
+        {
+            // Other players create these drops with no speed (multi_do_create_robot_powerups), so the
+            // owner does too: same seed, same start, the drops land in the same place on every screen
+            vms_vector robot_vel = del_obj->mtype.phys_info.velocity;
+            vm_vec_zero(&del_obj->mtype.phys_info.velocity);
             egg_objnum = object_create_egg(del_obj);
+            del_obj->mtype.phys_info.velocity = robot_vel;
+        }
     }
         
     else if (del_obj->ctype.ai_info.REMOTE_OWNER == -1) // No random goodies for robots we weren't in control of
@@ -1394,7 +1411,14 @@ multi_drop_robot_powerups(int objnum)
         
             d_srand(1245L);
             if (del_obj->contains_count > 0)
-                egg_objnum = object_create_egg(del_obj);
+            {
+            // Other players create these drops with no speed (multi_do_create_robot_powerups), so the
+            // owner does too: same seed, same start, the drops land in the same place on every screen
+            vms_vector robot_vel = del_obj->mtype.phys_info.velocity;
+            vm_vec_zero(&del_obj->mtype.phys_info.velocity);
+            egg_objnum = object_create_egg(del_obj);
+            del_obj->mtype.phys_info.velocity = robot_vel;
+        }
         }
     }
 

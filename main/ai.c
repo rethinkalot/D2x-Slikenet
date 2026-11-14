@@ -326,8 +326,10 @@ void do_ai_frame(object *obj)
 		return;
 	}
 
-	// Robots do nothing for observers; those controlling them handle their actions
+	// Robots do nothing for observers; those controlling them handle their actions.
+	// The death roll is local on every screen though, so an observer still plays it and the robot explodes.
 	if (is_observer()) {
+		do_any_robot_dying_frame(obj);
 		return;
 	}
 
@@ -785,7 +787,13 @@ _exit_cheat:
 	if (robptr->thief) {
 
 		compute_vis_and_vec(obj, &vis_vec_pos, ailp, &vec_to_player, &player_visibility, robptr, &visibility_and_vec_computed);
-		do_thief_frame(obj, dist_to_player, player_visibility, &vec_to_player);
+		// Only the owner moves the Thief (claiming it if free) and sends its position; every other copy
+		// follows those packets. Each copy used to chase its own player, so the Thief differed per
+		// screen and jumped whenever the owner's position arrived. Single player: always 1.
+		if (ai_multiplayer_awareness(obj, 75)) {
+			do_thief_frame(obj, dist_to_player, player_visibility, &vec_to_player);
+			ai_multi_send_robot_position(objnum, -1);
+		}
 
 		if (ready_to_fire(robptr, ailp)) {
 			int do_stuff = 0;

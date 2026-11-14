@@ -3186,11 +3186,12 @@ multi_do_door_open(const ubyte *buf)
     else if (w->state != WALL_DOOR_OPENING)
     {
         wall_open_door(seg, side);
-        w->flags=flag;
+        w->flags = flag | (w->flags & WALL_DOOR_OPENED);
     }
     else
-        w->flags=flag;
-
+        w->flags = flag | (w->flags & WALL_DOOR_OPENED);
+    // WALL_DOOR_OPENED (fly-through) is kept: only the door's own closing code clears it. A message
+    // with older flags used to wipe it, leaving a door that looked open but was solid on that copy.
 }
 
 void
