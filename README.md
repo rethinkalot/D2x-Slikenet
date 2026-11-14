@@ -140,3 +140,23 @@ A player who starts joining but never arrives (wrong level file, crash, closed g
 Closing the game no longer crashes in OpenGL, so the last gamelog lines are kept.
 - **Right Names In The Memlog**
 Closing the game window after leaving no longer writes a second memlog with your own name in place of the host's.
+- **Robot Messages Checked**
+Robot messages with an impossible robot type, gun or segment are ignored, and a full object list no longer breaks robot respawns.
+- **No Crash On Rejoin**
+Leaving a game and rejoining right away no longer crashes while the game waits for the host's settings.
+- **Observer Stays Listed**
+An observer stays on the HUD list, shown once, across map changes, gets every packet once, and can rejoin without "game is full".
+- **Robot Drops Land Together**
+Items a robot drops start out the same on every screen, so they land in the same place for everyone.
+- **Observer Ignores Blasts**
+Explosions no longer push or damage the observer's camera.
+- **Observer Sees Death Rolls**
+Robots that tumble when they die now tumble and explode for observers too.
+- **Thief In Sync**
+Only the player controlling the Thief moves it and everyone else follows, so it is in the same place on every screen and no longer teleports.
+- **Joiners See The Level As It Is**
+Players and observers who join see force fields, used switches and smashed lights the way they are in the game, not the way the level started.
+- **Open Doors Can Be Flown Through**
+A door that looks open is open on every screen; someone joining no longer turns open doors solid.
+- **Unlocked Doors For Joiners**
+Doors a switch has unlocked can be opened by players who join later.
