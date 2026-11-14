@@ -27,6 +27,12 @@ A player who rejoins into a lower player slot gets a SLikeNet link to every play
 -udp_gameport is the port the LAN game list searches on and Join Manually's game port, -udp_hostport is the port you host on, and -udp_myport is the port you join from. All default to 42424.
 - **Join Manually Remembers Game Port**
 A game port you type in Join Manually is saved and used again next time, including for the LAN game list.
+- **Host Can Change Map**
+The host can press Esc, pick Change Map, then a mission and starting level. Everyone goes straight to Prepare for Descent on the new map, with scores reset and the same game settings.
+- **Menus Keep The Game Smooth**
+In a multiplayer game the Esc menu and other screens no longer slow the game down, so the host keeps sending and relaying updates at full rate and observers see smooth movement.
+- **Co-op Start Points**
+In co-op every player starts on their own spot. Levels without co-op starts use their other player starts, so ships no longer stack on the first start.
 
 ## Running several copies on one PC
 
@@ -168,3 +174,11 @@ Players and observers who join see force fields, used switches and smashed light
 A door that looks open is open on every screen; someone joining no longer turns open doors solid.
 - **Unlocked Doors For Joiners**
 Doors a switch has unlocked can be opened by players who join later.
+- **No Weapon Crash After Loading**
+Loading a co-op save no longer crashes with "Secondary Weapon is not in order list". Everyone keeps the weapons they had selected.
+- **Crashed Players Removed**
+A player whose game crashed or was closed is removed for everyone about 10 to 15 seconds later, so observers can't watch them and their slot frees up.
+- **Backing Out Of A Join**
+A player who backs out of the waiting box while joining is taken out at once, so nobody keeps sending to them.
+- **Observers See Joins**
+Observers now see players who join or rejoin while they watch, and a game that switches from observing to playing no longer stays on the observer list.
