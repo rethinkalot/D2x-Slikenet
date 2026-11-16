@@ -802,6 +802,41 @@ void maybe_drop_net_powerup(int powerup_type)
 }
 
 //	------------------------------------------------------------------------------------------------------
+//	"Flags return to base" CTF option: put a flag in a goal of its own colour (the blue flag in the blue
+//	goal), for everyone. A level with no goal of that colour drops it like before.
+void ctf_drop_flag_at_goal(int flag_id)
+{
+	int goal = (flag_id == POW_FLAG_BLUE) ? SEGMENT_IS_GOAL_BLUE : SEGMENT_IS_GOAL_RED;
+	int segnum, objnum;
+	vms_vector new_pos;
+
+	if (Control_center_destroyed || Endlevel_sequence)
+		return;
+	for (segnum = 0; segnum <= Highest_segment_index; segnum++)
+		if (Segment2s[segnum].special == goal)
+			break;
+	if (segnum > Highest_segment_index)
+	{
+		maybe_drop_net_powerup(flag_id);
+		return;
+	}
+
+	Net_create_loc = 0;
+	objnum = call_object_create_egg(&Objects[Players[Player_num].objnum], 1, OBJ_POWERUP, flag_id);
+	if (objnum < 0)
+		return;
+
+	compute_segment_center(&new_pos, &Segments[segnum]);
+	multi_send_create_powerup(flag_id, segnum, objnum, &new_pos);
+
+	Objects[objnum].pos = new_pos;
+	vm_vec_zero(&Objects[objnum].mtype.phys_info.velocity);
+	obj_relink(objnum, segnum);
+
+	object_create_explosion(segnum, &new_pos, i2f(5), VCLIP_POWERUP_DISAPPEARANCE );
+}
+
+//	------------------------------------------------------------------------------------------------------
 //	Return true if current segment contains some object.
 int segment_contains_object(int obj_type, int obj_id, int segnum)
 {

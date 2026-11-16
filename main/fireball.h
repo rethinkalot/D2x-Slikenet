@@ -61,6 +61,7 @@ void explode_wall(int segnum, int sidenum);
 void do_exploding_wall_frame(void);
 void init_exploding_walls(void);
 extern void maybe_drop_net_powerup(int powerup_type);
+extern void ctf_drop_flag_at_goal(int flag_id);
 extern void maybe_replace_powerup_with_energy(object *del_obj);
 
 extern int get_explosion_vclip(object *obj, int stage);

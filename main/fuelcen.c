@@ -758,7 +758,10 @@ void fuelcen_check_for_goal(segment *segp)
 			 {
 				multi_send_capture_bonus (Player_num);
 				Players[Player_num].flags &=(~(PLAYER_FLAGS_FLAG));
-				maybe_drop_net_powerup (POW_FLAG_RED);
+				if (Netgame.game_flags & NETGAME_FLAG_CTF_BASE) // new red flag in the red goal
+					ctf_drop_flag_at_goal (POW_FLAG_RED);
+				else
+					maybe_drop_net_powerup (POW_FLAG_RED);
 			 }
 	  	 }
 	if ( seg2p->special==SEGMENT_IS_GOAL_RED) {
@@ -767,7 +770,10 @@ void fuelcen_check_for_goal(segment *segp)
 			 {		
 				multi_send_capture_bonus (Player_num);
 				Players[Player_num].flags &=(~(PLAYER_FLAGS_FLAG));
-				maybe_drop_net_powerup (POW_FLAG_BLUE);
+				if (Netgame.game_flags & NETGAME_FLAG_CTF_BASE) // new blue flag in the blue goal
+					ctf_drop_flag_at_goal (POW_FLAG_BLUE);
+				else
+					maybe_drop_net_powerup (POW_FLAG_BLUE);
 			 }
 	  	 }
   }

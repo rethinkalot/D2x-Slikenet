@@ -438,6 +438,7 @@ extern fix64 RefuseTimeLimit;
 #define NETGAME_FLAG_TEAM_HOARD         16
 #define NETGAME_FLAG_REALLY_ENDLEVEL    32
 #define NETGAME_FLAG_REALLY_FORMING     64
+#define NETGAME_FLAG_CTF_BASE           128 // CTF: an own dropped flag touched goes home, a new flag after a score appears in its goal
 
 #define NETGAME_NAME_LEN                15
 #define NETGAME_AUX_SIZE                20  // Amount of extra data for the network protocol to store in the netgame packet

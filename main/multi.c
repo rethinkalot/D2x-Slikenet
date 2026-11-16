@@ -90,6 +90,7 @@ void multi_send_drop_flag(int objnum,int seed);
 void multi_send_ranking();
 void multi_do_play_by_play(const ubyte *buf);
 void multi_new_bounty_target( int pnum );
+static int multi_pick_bounty_target( int skip );
 void multi_do_bounty( const ubyte *buf );
 void multi_save_game(ubyte slot, uint id, char *desc);
 void multi_restore_game(ubyte slot, uint id);
@@ -1257,16 +1258,12 @@ void multi_compute_kill(int killer, int killed)
         /* Bounty mode needs some lovin' */
         if( Game_mode & GM_BOUNTY && killed_pnum == Bounty_target && multi_i_am_master() )
         {
-            /* Select a random number */
-            int n = d_rand() % MAX_PLAYERS;
-            
-            /* Make sure they're valid: Don't check against kill flags,
-            * just in case everyone's dead! */
-            while( !Players[n].connected )
-                n = d_rand() % MAX_PLAYERS;
+            /* A random connected player: Don't check against kill flags, just in case everyone's dead! */
+            int n = multi_pick_bounty_target( -1 );
             
             /* Select new target  - it will be sent later when we're done with this function */
-            multi_new_bounty_target( n );
+            if( n >= 0 )
+                multi_new_bounty_target( n );
         }
 
         add_observatory_stat(killed_pnum, OBSEV_DEATH | OBSEV_SELF);
@@ -3034,16 +3031,12 @@ void multi_disconnect_player(int pnum)
         // Bounty target left - select a new one
         if( Game_mode & GM_BOUNTY && pnum == Bounty_target && multi_i_am_master() )
         {
-            /* Select a random number */
-            int n = d_rand() % MAX_PLAYERS;
-            
-            /* Make sure they're valid: Don't check against kill flags,
-                * just in case everyone's dead! */
-            while( !Players[n].connected )
-                n = d_rand() % MAX_PLAYERS;
+            /* A random connected player, not the one leaving */
+            int n = multi_pick_bounty_target( pnum );
             
             /* Select new target */
-            multi_new_bounty_target( n );
+            if( n >= 0 )
+                multi_new_bounty_target( n );
             
             /* Send this new data */
             multi_send_bounty();
@@ -6686,6 +6679,18 @@ void multi_do_bounty( const ubyte *buf )
         return;
     
     multi_new_bounty_target( buf[1] );
+}
+
+// A random connected player for the new bounty, never an observing host (no one could kill them)
+// and never 'skip' (a player who is leaving). -1 if there is no one, so the target stays as it is.
+static int multi_pick_bounty_target( int skip )
+{
+    int pick[MAX_PLAYERS], count = 0, i;
+
+    for( i = 0; i < MAX_PLAYERS; i++ )
+        if( Players[i].connected && i != skip && !( Netgame.host_is_obs && i == 0 ) )
+            pick[count++] = i;
+    return count ? pick[d_rand() % count] : -1;
 }
 
 void multi_new_bounty_target( int pnum )

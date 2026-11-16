@@ -755,6 +755,12 @@ int do_powerup(object *obj)
 					used=1;
 					multi_send_got_flag (Player_num);
 				}
+				// "Flags return to base": touching your own flag away from your goal sends it home
+				else if ((Netgame.game_flags & NETGAME_FLAG_CTF_BASE) && Segment2s[obj->segnum].special != SEGMENT_IS_GOAL_BLUE) {
+					powerup_basic(15, 0, 15, 0, "BLUE FLAG RETURNED!");
+					used=1;
+					ctf_drop_flag_at_goal (POW_FLAG_BLUE);
+				}
 		   break;
 
 		case POW_HOARD_ORB:
@@ -775,6 +781,12 @@ int do_powerup(object *obj)
 					Players[Player_num].flags |= PLAYER_FLAGS_FLAG;
 					used=1;
 					multi_send_got_flag (Player_num);
+				}
+				// "Flags return to base": touching your own flag away from your goal sends it home
+				else if ((Netgame.game_flags & NETGAME_FLAG_CTF_BASE) && Segment2s[obj->segnum].special != SEGMENT_IS_GOAL_RED) {
+					powerup_basic(15, 0, 15, 0, "RED FLAG RETURNED!");
+					used=1;
+					ctf_drop_flag_at_goal (POW_FLAG_RED);
 				}
 		   break;
 #endif

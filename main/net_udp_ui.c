@@ -1753,8 +1753,9 @@ struct select_teams_menu_data {
 int
 net_udp_select_teams(void)
 {
-	newmenu_item m[MAX_PLAYERS+7];
-	int choice, opt, opt_team_b;
+	newmenu_item m[MAX_PLAYERS+8];
+	int choice, opt, opt_team_b, opt_blank, opt_ctf;
+	int ctf_base = (Netgame.game_flags & NETGAME_FLAG_CTF_BASE) != 0;
 	ubyte team_vector = 0;
 	struct select_teams_menu_data menu_data;
 	int i;
@@ -1831,9 +1832,21 @@ net_udp_select_teams(void)
 			}
 		}
 
+		opt_blank = opt;
 		m[opt].type = NM_TYPE_TEXT;
 		m[opt].text = "";
 		opt++;
+
+		// CTF only: own flag touched goes home, a new flag after a score appears in its goal
+		opt_ctf = -1;
+		if (Netgame.gamemode == NETGAME_CAPTURE_FLAG)
+		{
+			opt_ctf = opt;
+			m[opt].type = NM_TYPE_CHECK;
+			m[opt].text = "Flags return to base";
+			m[opt].value = ctf_base;
+			opt++;
+		}
 
 		m[opt].type = NM_TYPE_MENU;
 		m[opt].text = TXT_ACCEPT;
@@ -1842,10 +1855,16 @@ net_udp_select_teams(void)
 		Assert(opt <= SDL_arraysize(m));
 	
 		choice = newmenu_do(NULL, TXT_TEAM_SELECTION, opt, m, net_udp_menu_select_teams_handler, &menu_data);
+		if (opt_ctf >= 0)
+			ctf_base = m[opt_ctf].value; // keep the tick while players are moved between teams
 
 		if (choice == opt-1)
 		{
 			Netgame.team_vector = team_vector;
+			if (ctf_base && Netgame.gamemode == NETGAME_CAPTURE_FLAG)
+				Netgame.game_flags |= NETGAME_FLAG_CTF_BASE;
+			else
+				Netgame.game_flags &= ~NETGAME_FLAG_CTF_BASE;
 			strcpy(Netgame.team_name[0], menu_data.team_names[0]);
 			strcpy(Netgame.team_name[1], menu_data.team_names[1]);
 			Netgame.team_color[0] = menu_data.team_colors[0];
@@ -1856,7 +1875,7 @@ net_udp_select_teams(void)
 		else if ((choice > 0) && (choice < opt_team_b)) {
 			team_vector |= (1 << pnums[choice]);
 		}
-		else if ((choice > opt_team_b) && (choice < opt-2)) {
+		else if ((choice > opt_team_b) && (choice < opt_blank)) {
 			team_vector &= ~(1 << pnums[choice]);
 		}
 		else if (choice == -1)
