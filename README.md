@@ -39,6 +39,8 @@ Ship positions and game messages only travel over SLikeNet. A player whose link 
 In Enter Game Address, a left click works like Enter.
 - **SLikeNet Handshake Sound**
 Your "SLikeNet Peer Link Success" line shows 2 seconds after a player appears and plays its own sound, slikenetmsg.wav. The chat line telling everyone else follows at 3 seconds with the same sound, and observer chat uses it too. No Player Chat Sound mutes it.
+- **New Sound for SLikeNet Peer Link and Chat Message sends at 2 and 3 seconds**
+Your "SLikeNet Peer Link Success" line plays slikenetmsg.wav 2 seconds after a player appears, and the chat line for everyone follows at 3 seconds with the same sound.
 
 ## Running several copies on one PC
 
@@ -113,6 +115,8 @@ In menus and file or pilot lists, a left click on empty space picks the highligh
 A new bounty target is never the host who is observing, and a leaving player is never picked as the target that replaces them.
 - **Capture The Flag: Flags Return To Base**
 A new option on the team selection screen. Touch your own dropped flag and it goes back to your goal, and after a score the new flag appears in its own goal instead of a random spot. Off keeps the original rules.
+- **Multiple New HD Title Screens for D2 in XDHDTITLES.DXA**
+XDHDTITLES.DXA has several new high-resolution title screens.
 
 ## BugFixes
 
