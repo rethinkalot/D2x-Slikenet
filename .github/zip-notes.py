@@ -1,5 +1,5 @@
 # Discord zip post for both games: new README titles of D1 and D2, grouped by README section,
-# tagged "(D1 only)" / "(D2 only)" when only one game has them, after a "New Dxx-Models-Textures" section
+# tagged "(D1 only)" / "(D2 only)" when only one game has them, with a "New Dxx-Models-Textures" link under
 # for each game whose model/texture pack changed in this push. Run by zip-notify.yml.
 # usage: zip-notes.py <d1 repo> <d2 repo> <d1 zip url> <d2 zip url> <d1 models url> <d2 models url>
 import difflib, re, subprocess, sys
@@ -15,7 +15,8 @@ def git(repo, *a):
     return subprocess.run(['git', '-C', repo] + list(a), capture_output=True, text=True, encoding='utf-8').stdout
 
 def title(line):
-    return re.sub(r'[.:]+$', '', re.match(r'- \*\*([^*]+)\*\*', line).group(1)).strip()
+    # No backticks: Discord would draw them as code boxes
+    return re.sub(r'[.:]+$', '', re.match(r'- \*\*([^*]+)\*\*', line).group(1)).replace(chr(96), '').strip()
 
 def sections(repo, rev):
     # README title -> the "## " section it sits in
@@ -63,13 +64,12 @@ models = [i for i, r in enumerate(repos) if git(r, 'diff', '--name-only', 'HEAD~
 if models and not git(repos[1], 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', ZIP[1]).strip():
     rows = []
 lines = []
-if models:
-    lines.append('## New **Dxx-Models-Textures** ' + '/'.join(('D1', 'D2')[i] for i in models))
-    for i in models:
-        lines += ['- **%s DXA Files**' % ('D1', 'D2')[i], model_urls[i]]
-lines += ['## New **D1x-SLikeNet**', urls[0], '## New **D2x-SLikeNet**', urls[1]]
+for i in (0, 1):
+    lines += ['## New **D%dx-SLikeNet**' % (i + 1), urls[i]]
+    if i in models: # a game's pack sits under its own build
+        lines += ['- New **D%dx-Models-Textures**' % (i + 1), model_urls[i]]
 if rows:
-    lines.append('## Update History:')
+    lines.append('## Update History')
 msg = '\n'.join(lines)
 for g in ORDER + sorted({g for g, _ in rows} - set(ORDER)):
     items = [t for gg, t in rows if gg == g]
