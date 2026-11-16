@@ -45,6 +45,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #include "aistruct.h"
 #include "robot.h"
 #include "weapon.h"
+#include "customsnd.h"
 #include "gauges.h"
 #include "player.h"
 #include "endlevel.h"
@@ -150,6 +151,7 @@ int gamedata_init()
 				Error("Cannot open ham file\n");
 
 	piggy_read_sounds();
+	custom_sounds_init(); // slikenetmsg.wav
 
 #ifdef OGL
 	if (GameCfg.UseCustomModels)

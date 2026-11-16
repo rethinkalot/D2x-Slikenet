@@ -24,6 +24,7 @@ add_executable (d2x-redux
     gamemine.c
     gamepal.c
     gamerend.c
+    customsnd.c
     gamesave.c
     gameseg.c
     gameseq.c

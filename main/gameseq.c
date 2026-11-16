@@ -815,6 +815,8 @@ void update_player_stats()
 //hack to not start object when loading level
 extern int Dont_start_sound_objects;
 
+#define SOUND_FAN 121 // the fan hum (eclip sound in the D1 and D2 data), played at 48.75% of the other wall sounds
+
 //go through this level and start any eclip sounds
 void set_sound_sources()
 {
@@ -854,7 +856,7 @@ void set_sound_sources()
 						}
 
 						compute_center_point_on_side(&pnt,seg,sidenum);
-						digi_link_sound_to_pos(sn,segnum,sidenum,&pnt,1, F1_0/2);
+						digi_link_sound_to_pos(sn,segnum,sidenum,&pnt,1, (sn == SOUND_FAN) ? fixmul(F1_0/2, fl2f(0.4875)) : F1_0/2);
 					}
 		}
 
