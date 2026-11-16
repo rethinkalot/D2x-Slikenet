@@ -50,9 +50,11 @@ k1, k2 = {key(t) for _, t in found[0]}, {key(t) for _, t in found[1]}
 rows = [(g, t + ('' if key(t) in k2 else ' *(D1 only)*')) for g, t in found[0]]
 rows += [(g, t + ' *(D2 only)*') for g, t in found[1] if key(t) not in k1]
 
-# A game's model/texture pack is listed when this push (since its previous game zip) changed it
-models = [i for i, r in enumerate(repos)
-          if len(zips[i]) > 1 and git(r, 'diff', '--name-only', zips[i][1], 'HEAD', '--', MODELS[i]).strip()]
+# A game's model/texture pack is listed when its repo's newest commit changed it (F7 commits it with the game zip)
+models = [i for i, r in enumerate(repos) if git(r, 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', MODELS[i]).strip()]
+# A push of only the packs (the D2 game zip unchanged) posts just the links, not the Update History again
+if models and not git(repos[1], 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', ZIP[1]).strip():
+    rows = []
 lines = []
 if models:
     lines.append('## New **Dxx-Models-Textures** ' + '/'.join(('D1', 'D2')[i] for i in models))
