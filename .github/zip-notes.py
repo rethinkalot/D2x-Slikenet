@@ -1,6 +1,6 @@
 # Discord zip post for both games: new README titles of D1 and D2, grouped by README section,
-# tagged "(D1 only)" / "(D2 only)" when only one game has them, with a "New Dxx-Models-Textures" link under
-# for each game whose model/texture pack changed in this push. Run by zip-notify.yml.
+# tagged "(D1 only)" / "(D2 only)" when only one game has them, with each game's
+# model/texture pack link under its game link. Run by zip-notify.yml.
 # usage: zip-notes.py <d1 repo> <d2 repo> <d1 zip url> <d2 zip url> <d1 models url> <d2 models url>
 import difflib, re, subprocess, sys
 
@@ -9,7 +9,7 @@ GROUPS = {'Multiplayer': 'SLikeNet & Network', 'Running several copies on one PC
           'BugFixes': 'Bug Fixes'}
 ORDER = ['SLikeNet & Network', 'Features & Options', 'Bug Fixes']
 ZIP = {0: 'download/D1x-Redux-SLikeNet.zip', 1: 'download/D2x-Redux-SLikeNet.zip'}
-MODELS = {0: 'download/D1x-Models-Textures.zip', 1: 'download/D2x-Models-Textures.zip'}
+
 
 def git(repo, *a):
     return subprocess.run(['git', '-C', repo] + list(a), capture_output=True, text=True, encoding='utf-8').stdout
@@ -58,16 +58,13 @@ k1, k2 = {key(t) for _, t in found[0]}, {key(t) for _, t in found[1]}
 rows = [(g, t + ('' if key(t) in k2 else ' *(D1 only)*')) for g, t in found[0]]
 rows += [(g, t + ' *(D2 only)*') for g, t in found[1] if key(t) not in k1]
 
-# A game's model/texture pack is listed when its repo's newest commit changed it (F7 commits it with the game zip)
-models = [i for i, r in enumerate(repos) if git(r, 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', MODELS[i]).strip()]
 # A push of only the packs (the D2 game zip unchanged) posts just the links, not the Update History again
-if models and not git(repos[1], 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', ZIP[1]).strip():
+if not git(repos[1], 'diff', '--name-only', 'HEAD~1', 'HEAD', '--', ZIP[1]).strip():
     rows = []
 lines = []
-for i in (0, 1):
-    lines += ['## New **D%dx-SLikeNet**' % (i + 1), urls[i]]
-    if i in models: # a game's pack sits under its own build
-        lines += ['- New **D%dx-Models-Textures**' % (i + 1), model_urls[i]]
+for i in (0, 1): # every post: each game's zip with its model/texture pack under it
+    lines += ['## New **D%dx-SLikeNet**' % (i + 1), urls[i],
+              '- New **D%dx-Models-Textures**' % (i + 1), model_urls[i]]
 if rows:
     lines.append('## Update History')
 msg = '\n'.join(lines)
