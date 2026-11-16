@@ -17,23 +17,30 @@ def git(repo, *a):
 def title(line):
     return re.sub(r'[.:]+$', '', re.match(r'- \*\*([^*]+)\*\*', line).group(1)).strip()
 
+def sections(repo, rev):
+    # README title -> the "## " section it sits in
+    section, where = None, {}
+    for l in git(repo, 'show', rev + ':README.md').splitlines():
+        if l.startswith('## '): section = l[3:].strip()
+        elif l.startswith('- **'): where.setdefault(title(l), section)
+    return where
+
 def new_titles(repo, prev, cur):
-    # Titles added between two commits. An added title that nearly matches a removed one is an existing
-    # entry that was fixed (a typo) or moved to another section, so it is not new.
+    # Titles added between two commits. An added title that nearly matches a removed one in the same
+    # section is a fixed typo, so it is not new; an entry moved to another section is listed again.
     removed, added = [], []
     for l in git(repo, 'diff', prev, cur, '--', 'README.md').splitlines():
         if l.startswith('-- **'): removed.append(title(l[1:]))
         elif l.startswith('+- **'): added.append(title(l[1:]))
+    if not added: return []
+    was, where = sections(repo, prev), sections(repo, cur)
     for t in list(added):
-        old = next((r for r in removed if difflib.SequenceMatcher(None, r.lower(), t.lower()).ratio() >= 0.8), None)
+        old = next((r for r in removed if was.get(r) == where.get(t) and
+                    difflib.SequenceMatcher(None, r.lower(), t.lower()).ratio() >= 0.8), None)
         if old is not None:
             removed.remove(old)
             added.remove(t)
     if not added: return []
-    section, where = None, {}
-    for l in git(repo, 'show', cur + ':README.md').splitlines():
-        if l.startswith('## '): section = l[3:].strip()
-        elif l.startswith('- **'): where.setdefault(title(l), section)
     return [(GROUPS.get(where.get(t), where.get(t) or 'Other'), t) for t in dict.fromkeys(added)]
 
 repos, urls, model_urls = sys.argv[1:3], sys.argv[3:5], sys.argv[5:7]

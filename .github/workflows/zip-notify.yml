@@ -22,4 +22,4 @@ jobs:
           # New README titles of both, grouped by README section and tagged (D1 only) / (D2 only): .github/zip-notes.py
           git clone -q --no-checkout --filter=blob:none -b D1-SlikeNet-WorkBranch "$D1_REPO" "$RUNNER_TEMP/d1"
           msg=$(python3 .github/zip-notes.py "$RUNNER_TEMP/d1" . "$D1_URL" "$D2_URL" "$D1_MODELS" "$D2_MODELS")
-          jq -n --arg c "$msg" '{content: $c}' | curl -sf -H "Content-Type: application/json" -d @- "$WEBHOOK"
+          jq -n --arg c "$msg" '{content: $c, username: "Dxx-SLikeNet"}' | curl -sf -H "Content-Type: application/json" -d @- "$WEBHOOK"
