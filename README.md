@@ -37,6 +37,8 @@ In co-op every player starts on their own spot. Levels without co-op starts use 
 Ship positions and game messages only travel over SLikeNet. A player whose link to the host fails or drops is removed after 5 seconds. Joining, game lists and observers still use plain UDP.
 - **Click To Join**
 In Enter Game Address, a left click works like Enter.
+- **SLikeNet Handshake Sound**
+Your "SLikeNet Peer Link Success" line shows 2 seconds after a player appears and plays its own sound, slikenetmsg.wav. The chat line telling everyone else follows at 3 seconds with the same sound, and observer chat uses it too. No Player Chat Sound mutes it.
 
 ## Running several copies on one PC
 
@@ -105,6 +107,12 @@ Lasers 1 to 6 do 10, 10.5, 11, 11.5, 11.5 and 12.5 damage. Laser 5 fires 5% fast
 Homing missiles lock on at D1's wider angle, ignore enemy mines and last 20 seconds, and Megas fire every half second. On Ace and Insane, robot homing missiles, megas and smart blobs use D1's damage.
 - **Weak Gauss Push And Fireball**
 With Disable Gauss Splash on, Gauss hits give a small push and show their fireball on ships, without splash damage to anyone.
+- **Click Anywhere acts as Enter on Menus**
+In menus and file or pilot lists, a left click on empty space picks the highlighted item, like Enter. Yes/No and other message boxes still need a click on a button.
+- **Bounty Skips Observing Host**
+A new bounty target is never the host who is observing, and a leaving player is never picked as the target that replaces them.
+- **Capture The Flag: Flags Return To Base**
+A new option on the team selection screen. Touch your own dropped flag and it goes back to your goal, and after a score the new flag appears in its own goal instead of a random spot. Off keeps the original rules.
 
 ## BugFixes
 
@@ -176,9 +184,9 @@ Only the player controlling the Thief moves it and everyone else follows, so it 
 Players and observers who join see force fields, used switches and smashed lights the way they are in the game, not the way the level started.
 - **Open Doors Can Be Flown Through**
 A door that looks open is open on every screen; someone joining no longer turns open doors solid.
-- **Unlocked Doors For Joiners**`
+- **Unlocked Doors For Joiners**
 Doors a switch has unlocked can be opened by players who join later.
-- **No Weapon Crash After Loaading**
+- **No Weapon Crash After Loading**
 Loading a co-op save no longer crashes with "Secondary Weapon is not in order list". Everyone keeps the weapons they had selected.
 - **Crashed Players Removed**
 A player whose game crashed or was closed is removed for everyone about 10 to 15 seconds later, so observers can't watch them and their slot frees up.
@@ -186,9 +194,5 @@ A player whose game crashed or was closed is removed for everyone about 10 to 15
 A player who backs out of the waiting box while joining is taken out at once, so nobody keeps sending to them.
 - **Observers See Joins**
 Observers now see players who join or rejoin while they watch, and a game that switches from observing to playing no longer stays on the observer list.
-- **Click Anywhere Picks**
-In menus and file or pilot lists, a left click on empty space picks the highlighted item, like Enter. Yes/No and other message boxes still need a click on a button.
-- **Bounty Skips Observing Host**
-A new bounty target is never the host who is observing, and a leaving player is never picked as the target that replaces them.
-- **Capture The Flag: Flags Return To Base**
-A new option on the team selection screen. Touch your own dropped flag and it goes back to your goal, and after a score the new flag appears in its own goal instead of a random spot. Off keeps the original rules.
+- **Bounty Mode Endless Loop**
+Picking a new bounty target can no longer hang the game when there is no player left to pick.
