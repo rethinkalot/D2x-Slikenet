@@ -176,9 +176,9 @@ Only the player controlling the Thief moves it and everyone else follows, so it 
 Players and observers who join see force fields, used switches and smashed lights the way they are in the game, not the way the level started.
 - **Open Doors Can Be Flown Through**
 A door that looks open is open on every screen; someone joining no longer turns open doors solid.
-- **Unlocked Doors For Joiners**
+- **Unlocked Doors For Joiners**`
 Doors a switch has unlocked can be opened by players who join later.
-- **No Weapon Crash After Loading**
+- **No Weapon Crash After Loaading**
 Loading a co-op save no longer crashes with "Secondary Weapon is not in order list". Everyone keeps the weapons they had selected.
 - **Crashed Players Removed**
 A player whose game crashed or was closed is removed for everyone about 10 to 15 seconds later, so observers can't watch them and their slot frees up.
@@ -186,3 +186,9 @@ A player whose game crashed or was closed is removed for everyone about 10 to 15
 A player who backs out of the waiting box while joining is taken out at once, so nobody keeps sending to them.
 - **Observers See Joins**
 Observers now see players who join or rejoin while they watch, and a game that switches from observing to playing no longer stays on the observer list.
+- **Click Anywhere Picks**
+In menus and file or pilot lists, a left click on empty space picks the highlighted item, like Enter. Yes/No and other message boxes still need a click on a button.
+- **Bounty Skips Observing Host**
+A new bounty target is never the host who is observing, and a leaving player is never picked as the target that replaces them.
+- **Capture The Flag: Flags Return To Base**
+A new option on the team selection screen. Touch your own dropped flag and it goes back to your goal, and after a score the new flag appears in its own goal instead of a random spot. Off keeps the original rules.
