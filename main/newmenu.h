@@ -119,6 +119,7 @@ struct window *newmenu_get_window(newmenu *menu);
 void newmenu_set_rval(newmenu *menu, int rval);
 void nm_draw_background(int x1, int y1, int x2, int y2);
 void nm_restore_background(int x, int y, int w, int h);
+void nm_draw_background1(char * filename); // full-screen menu background, e.g. the main menu or stars
 
 extern const char *Newmenu_allowed_chars;
 

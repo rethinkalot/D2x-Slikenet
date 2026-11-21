@@ -100,8 +100,23 @@ struct newmenu
 // Set by the message boxes just before they open their menu, so it doesn't take a click anywhere as Enter
 static int next_menu_no_click_anywhere;
 
-grs_bitmap nm_background, nm_background1;
-grs_bitmap *nm_background_sub = NULL;
+grs_bitmap nm_background1;
+#ifdef OGL
+static ubyte nm_background1_palette[768]; // an 8-bit full-screen picture's own colours
+static sbyte nm_background1_rgb;          // 24-bit PCX: bm_data holds RGB pixels, no palette
+#endif
+
+// Menu box pictures, each loaded on first use. [0] is scoresb.pcx (scores.pcx if it is missing),
+// the fallback; the rest are one per box shape, picked by the box's width / height.
+#define NM_BG_COUNT 6
+static const char *nm_bg_base[NM_BG_COUNT] = { "scoresb", "scoresb-tall", "scoresb-square", "scoresb-std", "scoresb-wide", "scoresb-strip" };
+static const float nm_bg_max_aspect[NM_BG_COUNT] = { 0, 1.05f, 1.38f, 1.8f, 2.5f, 0 }; // the last shape takes everything wider
+static grs_bitmap nm_bg[NM_BG_COUNT];
+static grs_bitmap *nm_bg_sub[NM_BG_COUNT];
+static ubyte nm_bg_palette[NM_BG_COUNT][768]; // each PCX's own colours
+static char nm_bg_name[NM_BG_COUNT][32];
+static sbyte nm_bg_missing[NM_BG_COUNT];
+static sbyte nm_bg_rgb[NM_BG_COUNT]; // 24-bit PCX: bm_data holds RGB pixels, no palette
 
 newmenu *newmenu_do4( char * title, char * subtitle, int nitems, newmenu_item * item, int (*subfunction)(newmenu *menu, d_event *event, void *userdata), void *userdata, int citem, char * filename, int TinyMode, int TabsFlag );
 
@@ -114,20 +129,33 @@ newmenu *newmenu_do4( char * title, char * subtitle, int nitems, newmenu_item * 
 	void newmenu_set_x_nudge(int px) { newmenu_x_nudge_px = px; }
 
 void newmenu_free_background()	{
-	if (nm_background.bm_data)
+	int i;
+	for (i = 0; i < NM_BG_COUNT; i++)
 	{
-		if (nm_background_sub)
+		if (nm_bg_sub[i])
 		{
-			gr_free_sub_bitmap(nm_background_sub);
-			nm_background_sub = NULL;
+			gr_free_sub_bitmap(nm_bg_sub[i]);
+			nm_bg_sub[i] = NULL;
 		}
-		gr_free_bitmap_data (&nm_background);
+		if (nm_bg[i].bm_data)
+			gr_free_bitmap_data (&nm_bg[i]);
+		nm_bg_missing[i] = 0;
+		nm_bg_rgb[i] = 0;
 	}
 	if (nm_background1.bm_data)
 		gr_free_bitmap_data (&nm_background1);
+#ifdef OGL
+	nm_background1_rgb = 0;
+#endif
 }
 
-// Draws the custom menu background pcx, if available
+#ifdef OGL
+extern unsigned char *ogl_pal;
+#endif
+
+// Draws the custom menu background pcx, if available.
+// In OGL the picture lives in its own texture, 24-bit or built from its own palette, and the
+// game palette is left alone, so the picture can never change the menu text colours.
 void nm_draw_background1(char * filename)
 {
 	int pcx_error;
@@ -137,47 +165,120 @@ void nm_draw_background1(char * filename)
 		if (nm_background1.bm_data == NULL)
 		{
 			gr_init_bitmap_data (&nm_background1);
+#ifdef OGL
+			{
+				int rw, rh;
+				ubyte *rgb;
+				pcx_error = pcx_read_rgb(filename, &rw, &rh, &rgb);
+				if (pcx_error == PCX_ERROR_NONE)
+				{
+					gr_init_bitmap(&nm_background1, BM_LINEAR, 0, 0, rw, rh, rw, rgb);
+					nm_background1_rgb = 1;
+				}
+				else
+					pcx_error = pcx_read_bitmap( filename, &nm_background1, BM_LINEAR, nm_background1_palette );
+			}
+#else
 			pcx_error = pcx_read_bitmap( filename, &nm_background1, BM_LINEAR, gr_palette );
+#endif
 			Assert(pcx_error == PCX_ERROR_NONE);
 			(void)pcx_error;
 		}
 		gr_palette_load( gr_palette );
+#ifdef OGL
+		if (nm_background1.bm_data)
+		{
+			if (!nm_background1.gltexture || nm_background1.gltexture->handle <= 0)
+			{
+				if (nm_background1_rgb)
+					ogl_loadrgbtexture(&nm_background1, nm_background1.bm_data, GameCfg.TexFilt);
+				else
+				{
+					ogl_pal = nm_background1_palette;
+					ogl_loadbmtexture_f(&nm_background1, GameCfg.TexFilt, NULL);
+					ogl_pal = gr_palette;
+				}
+			}
+			ogl_ubitmapm_cs(0,0,-1,-1,&nm_background1,-1,F1_0); // OGL scaling, any picture size
+		}
+#else
 		show_fullscr(&nm_background1);
+#endif
 	}
 
 	strcpy(last_palette_loaded,"");		//force palette load next time
 }
 
-#define MENU_BACKGROUND_BITMAP_HIRES (PHYSFSX_exists("scoresb.pcx",1)?"scoresb.pcx":"scores.pcx")
-#define MENU_BACKGROUND_BITMAP_LORES (PHYSFSX_exists("scores.pcx",1)?"scores.pcx":"scoresb.pcx")
-#define MENU_BACKGROUND_BITMAP (HIRESMODE?MENU_BACKGROUND_BITMAP_HIRES:MENU_BACKGROUND_BITMAP_LORES)
+// Always the HD scoresb.pcx; scores.pcx only if scoresb.pcx is missing
+#define MENU_BACKGROUND_BITMAP (PHYSFSX_exists("scoresb.pcx",1)?"scoresb.pcx":"scores.pcx")
+
+// Loads menu box picture i once. Returns 0 if its file isn't there (picture 0 must be).
+static int nm_bg_load(int i)
+{
+	if (nm_bg[i].bm_data)
+		return 1;
+	if (nm_bg_missing[i])
+		return 0;
+	if (i == 0)
+		snprintf(nm_bg_name[i], sizeof(nm_bg_name[i]), "%s", MENU_BACKGROUND_BITMAP);
+	else
+		snprintf(nm_bg_name[i], sizeof(nm_bg_name[i]), "%s.pcx", nm_bg_base[i]);
+	gr_init_bitmap_data (&nm_bg[i]);
+#ifdef OGL
+	{
+		int rw, rh;
+		ubyte *rgb;
+		if (pcx_read_rgb(nm_bg_name[i], &rw, &rh, &rgb) == PCX_ERROR_NONE)
+		{
+			gr_init_bitmap(&nm_bg[i], BM_LINEAR, 0, 0, rw, rh, rw, rgb);
+			nm_bg_rgb[i] = 1;
+			return 1;
+		}
+	}
+#endif
+	if (pcx_read_bitmap(nm_bg_name[i], &nm_bg[i], BM_LINEAR, nm_bg_palette[i]) != PCX_ERROR_NONE)
+	{
+		Assert(i != 0);
+		gr_free_bitmap_data (&nm_bg[i]);
+		nm_bg_missing[i] = 1;
+		return 0;
+	}
+#ifndef OGL
+	gr_remap_bitmap_good( &nm_bg[i], nm_bg_palette[i], -1, -1 );
+#endif
+	return 1;
+}
+
+#ifdef OGL
+// Builds the box texture from the PCX's own palette instead of the game palette, so the picture
+// keeps the colours it was drawn with and the game palette (menu text and everything else) is
+// never touched. Also run on every draw, so a texture dropped by a video reset is rebuilt the same way.
+static void nm_background_texture(int i)
+{
+	if (nm_bg[i].gltexture && nm_bg[i].gltexture->handle > 0)
+		return;
+	if (nm_bg_rgb[i])
+	{
+		ogl_loadrgbtexture(&nm_bg[i], nm_bg[i].bm_data, GameCfg.TexFilt); // full colour, no palette at all
+		return;
+	}
+	ogl_pal = nm_bg_palette[i];
+	ogl_loadbmtexture_f(&nm_bg[i], GameCfg.TexFilt, GameCfg.TexFilt ? nm_bg_base[i] : NULL);
+	ogl_pal = gr_palette;
+}
+#endif
 
 // Draws the frame background for menus
 void nm_draw_background(int x1, int y1, int x2, int y2 )
 {
-	int w,h,init_sub=0;
-	static float BGScaleX=1,BGScaleY=1;
+	int w,h,sx,sy,sw,sh,b;
+	float BGScaleX,BGScaleY;
+	grs_bitmap *bg;
 	grs_canvas *tmp,*old;
 
-	if (nm_background.bm_data == NULL)
-	{
-		int pcx_error;
-		ubyte background_palette[768];
-		gr_init_bitmap_data (&nm_background);
-		pcx_error = pcx_read_bitmap(MENU_BACKGROUND_BITMAP,&nm_background,BM_LINEAR,background_palette);
-		Assert(pcx_error == PCX_ERROR_NONE);
-		(void)pcx_error;
-	    //gr_remap_bitmap_good(&nm_background, background_palette, -1, -1 );
-		#if defined(OGL)
-		extern unsigned char *ogl_pal;
-		ogl_pal = background_palette;
-		ogl_loadbmtexture_f(&nm_background, GameCfg.TexFilt, "scores");
-		ogl_pal = gr_palette; 
-		#endif
-		BGScaleX=((float)SWIDTH/nm_background.bm_w);
-		BGScaleY=((float)SHEIGHT/nm_background.bm_h);
-		init_sub=1;
-	}
+	nm_bg_load(0); // always loaded: the fallback, and its size sets the edge shading
+	BGScaleX=((float)SWIDTH/nm_bg[0].bm_w);
+	BGScaleY=((float)SHEIGHT/nm_bg[0].bm_h);
 
 	if ( x1 < 0 ) x1 = 0;
 	if ( y1 < 0 ) y1 = 0;
@@ -195,16 +296,34 @@ void nm_draw_background(int x1, int y1, int x2, int y2 )
 	gr_set_current_canvas(tmp);
 	gr_palette_load( gr_palette );
 
-	show_fullscr( &nm_background ); // show so we load all necessary data for the sub-bitmap
-	if (!init_sub && ((nm_background_sub->bm_w != w*(((float) nm_background.bm_w)/SWIDTH)) || (nm_background_sub->bm_h != h*(((float) nm_background.bm_h)/SHEIGHT))))
+	// Pick the picture made for this box's shape; the fallback if that file is missing
+	for (b = 1; b < NM_BG_COUNT - 1 && (float)max(w,1)/max(h,1) > nm_bg_max_aspect[b]; b++)
+		;
+	if (!nm_bg_load(b))
+		b = 0;
+	bg = &nm_bg[b];
+
+	// Fit the whole picture to the box, so its drawn frame shows on all 4 sides
+	sw = bg->bm_w;
+	sh = bg->bm_h;
+	sx = 0;
+	sy = 0;
+	if (nm_bg_sub[b] &&(nm_bg_sub[b]->bm_x != sx || nm_bg_sub[b]->bm_y != sy ||
+		nm_bg_sub[b]->bm_w != sw || nm_bg_sub[b]->bm_h != sh))
 	{
-		init_sub=1;
-		gr_free_sub_bitmap(nm_background_sub);
-		nm_background_sub = NULL;
+		gr_free_sub_bitmap(nm_bg_sub[b]);
+		nm_bg_sub[b] = NULL;
 	}
-	if (init_sub)
-		nm_background_sub = gr_create_sub_bitmap(&nm_background,0,0,w*(((float) nm_background.bm_w)/SWIDTH),h*(((float) nm_background.bm_h)/SHEIGHT));
-	show_fullscr( nm_background_sub );
+#ifdef OGL
+	nm_background_texture(b); // before the sub-bitmap, which takes the parent's texture pointer
+#endif
+	if (!nm_bg_sub[b])
+		nm_bg_sub[b] = gr_create_sub_bitmap(bg,sx,sy,sw,sh);
+#ifdef OGL
+	ogl_ubitmapm_cs(0,0,-1,-1,nm_bg_sub[b],-1,F1_0); // OGL scaling, any picture size
+#else
+	show_fullscr( nm_bg_sub[b] );
+#endif
 
 	gr_set_current_canvas(old);
 	gr_free_sub_canvas(tmp);
@@ -331,9 +450,10 @@ void nm_rstring( int w1,int x, int y, char * s )
 	gr_string( x-w, y, s );
 }
 
-void nm_string_inputbox( int w, int x, int y, char * text, int current )
+void nm_string_inputbox( int w, int x, int y, char * text, int current, int cursor )
 {
 	int w1,h1,aw;
+	char *start = text;
 
 	// even with variable char widths and a box that goes over the whole screen, we maybe never get more than 75 chars on the line
 	if (strlen(text)>75)
@@ -351,7 +471,21 @@ void nm_string_inputbox( int w, int x, int y, char * text, int current )
 	nm_string_black( w, x, y, text );
 
 	if ( current && timer_query() & 0x8000 )
+	{
+		if (cursor >= 0 && cursor < (int)strlen(start)) // a cursor inside the text (the resolution field): draw it there
+		{
+			char prefix[80];
+			int n = cursor - (int)(text - start);
+
+			if (n < 0)
+				n = 0;
+			snprintf(prefix, sizeof(prefix), "%.*s", n, text);
+			w1 = 0;
+			if (n)
+				gr_get_string_size(prefix, &w1, &h1, &aw);
+		}
 		gr_string( x+w1, y, CURSOR_STRING );
+	}
 }
 
 void draw_item( newmenu_item *item, int is_current, int tiny, int tabs_flag, int scroll_offset )
@@ -397,11 +531,11 @@ void draw_item( newmenu_item *item, int is_current, int tiny, int tabs_flag, int
 			{
 				nm_string( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, tabs_flag );
 			} else {
-				nm_string_inputbox( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, is_current );
+				nm_string_inputbox( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, is_current, item->value );
 			}
 			break;
 		case NM_TYPE_INPUT:
-			nm_string_inputbox( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, is_current );
+			nm_string_inputbox( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, is_current, item->value );
 			break;
 		case NM_TYPE_CHECK:
 			nm_string( item->w, item->x, item->y-(((int)LINE_SPACING)*scroll_offset), item->text, tabs_flag );

@@ -18,6 +18,9 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
  */
 
 
+#include <ctype.h>
+#include "config.h"
+#include "robot.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -53,6 +56,7 @@ COPYRIGHT 1993-1999 PARALLAX SOFTWARE CORPORATION.  ALL RIGHTS RESERVED.
 #ifdef OGL
 #include "ogl_init.h"
 void menu_frame_delay(void); // game.c
+void ogl_cache_polymodel_textures(int model_num); // ogl.c
 #endif
 
 extern unsigned RobSX,RobSY,RobDX,RobDY; // Robot movie coords
@@ -87,6 +91,7 @@ typedef struct title_screen
 	grs_bitmap title_bm;
 	fix64 timer;
 	int allow_keys;
+	int rgb; // 24-bit PCX: title_bm holds RGB pixels and is drawn in full colour, no palette
 } title_screen;
 
 int title_handler(window *wind, d_event *event, title_screen *ts)
@@ -121,6 +126,15 @@ int title_handler(window *wind, d_event *event, title_screen *ts)
 
 		case EVENT_WINDOW_DRAW:
 			gr_set_current_canvas( NULL );
+#ifdef OGL
+			if (ts->rgb)
+			{
+				if (!ts->title_bm.gltexture || ts->title_bm.gltexture->handle <= 0)
+					ogl_loadrgbtexture(&ts->title_bm, ts->title_bm.bm_data, GameCfg.TexFilt);
+				ogl_ubitmapm_cs(0, 0, -1, -1, &ts->title_bm, -1, F1_0);
+				break;
+			}
+#endif
 			show_fullscr(&ts->title_bm);
 			break;
 
@@ -158,7 +172,21 @@ int show_title_screen( char * filename, int allow_keys, int from_hog_only )
 	filename = new_filename;
 
 	gr_init_bitmap_data (&ts->title_bm);
+	ts->rgb = 0;
 
+#ifdef OGL
+	{
+		// a 24-bit title is shown in full colour, like the main menu picture
+		int rw, rh;
+		ubyte *rgb;
+		if (pcx_read_rgb(filename, &rw, &rh, &rgb) == PCX_ERROR_NONE)
+		{
+			gr_init_bitmap(&ts->title_bm, BM_LINEAR, 0, 0, rw, rh, rw, rgb);
+			ts->rgb = 1;
+		}
+	}
+	if (!ts->rgb)
+#endif
 	if ((pcx_error=pcx_read_bitmap( filename, &ts->title_bm, BM_LINEAR, gr_palette ))!=PCX_ERROR_NONE)	{
 		Error( "Error loading briefing screen <%s>, PCX load error: %s (%i)\n",filename, pcx_errormsg(pcx_error), pcx_error);
 	}
@@ -628,6 +656,8 @@ void put_char_delay(briefing *br, int ch)
 }
 
 void init_spinning_robot(briefing *br);
+static int briefing_robot_for_movie(char letter);
+static void init_spinning_robot_d2(briefing *br);
 int load_briefing_screen(briefing *br, char *fname);
 
 // Process a character for the briefing,
@@ -690,7 +720,16 @@ int briefing_process_char(briefing *br)
 				kludge=*br->message++;
 				spinRobotName[2]=kludge; // ugly but proud
 
-				br->robot_playing=InitRobotMovie(spinRobotName);
+				if (briefing_robot_for_movie(kludge) >= 0) // 3D Briefing Robots: the live model instead of the movie
+				{
+					init_spinning_robot_d2(br);
+					br->robot_num = briefing_robot_for_movie(kludge);
+#ifdef OGL
+					ogl_cache_polymodel_textures(Robot_info[br->robot_num].model_num); // textures ready for the first frame
+#endif
+				}
+				else
+					br->robot_playing=InitRobotMovie(spinRobotName);
 
 				// gr_remap_bitmap_good( &grd_curcanv->cv_bitmap, pal, -1, -1 );
 
@@ -1056,6 +1095,32 @@ void show_briefing_bitmap(grs_bitmap *bmp)
 }
 
 //-----------------------------------------------------------------------------
+// D2's briefing robot movies rba.mve .. rby.mve and the robot type each one shows, so a briefing can
+// draw the robot as a live 3D model, sharp at any resolution like D1's, instead of the 160x88 movie.
+// Matched by comparing each movie frame with the robot models. -1 = no movie for that letter.
+static const signed char briefing_movie_robot[26] = {
+	24, 25, 34, 26, 27, 28, 29, 30, 51, 33, 36, 49, 37,	// a .. m
+	38, 50, 39, 61, 40, 43, 42, 44, -1, 47, 48, 41, -1	// n .. z
+};
+
+// The robot type for a briefing movie letter, or -1 to play the movie
+static int briefing_robot_for_movie(char letter)
+{
+	int r;
+	if (!GameCfg.BriefingRobots3D || tolower((unsigned char)letter) < 'a' || tolower((unsigned char)letter) > 'z')
+		return -1;
+	r = briefing_movie_robot[tolower((unsigned char)letter) - 'a'];
+	return (r >= 0 && r < N_robot_types && Robot_info[r].model_num >= 0) ? r : -1;
+}
+
+// The 3D robot goes exactly where D2 draws its robot movies: 160x88 at (SWIDTH/2.3, SHEIGHT/2.3) on a
+// 320x200 layout, scaled evenly to the screen
+static void init_spinning_robot_d2(briefing *br)
+{
+	float scale = min((float)SWIDTH / 320, (float)SHEIGHT / 200);
+	br->robot_canv = gr_create_sub_canvas(grd_curcanv, SWIDTH / 2.3, SHEIGHT / 2.3, 160 * scale, 88 * scale);
+}
+
 void init_spinning_robot(briefing *br) //(int x,int y,int w,int h)
 {
 	int x = rescale_x(138);
@@ -1272,8 +1337,10 @@ int new_briefing_screen(briefing *br, int first)
 	br->guy_bitmap_show = 0;
 	br->prev_ch = -1;
 
-	if ((songs_is_playing() == -1) && (br->hum_channel == -1))
-		br->hum_channel  = digi_start_sound( digi_xlat_sound(SOUND_BRIEFING_HUM), F1_0/2, 0xFFFF/2, 1, -1, -1, -1 );
+	// the hum, in place of the music: only when no music is heard (volume 0 or nothing playing),
+	// 2 FX-slider steps below the other sounds, never under 1
+	if (br->hum_channel == -1 && GameCfg.DigiVolume && (!GameCfg.MusicVolume || songs_is_playing() == -1))
+		br->hum_channel = digi_start_sound( digi_xlat_sound(SOUND_BRIEFING_HUM), F1_0 * max(1, GameCfg.DigiVolume - 2) / GameCfg.DigiVolume, 0xFFFF/2, 1, -1, -1, -1 );
 
 	return 1;
 }

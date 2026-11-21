@@ -1262,15 +1262,16 @@ int p_secret_level_destroyed(void)
 #define TXT_SECRET_RETURN  "Returning to level %i", Entered_from_level
 #define TXT_SECRET_ADVANCE "Base level destroyed.\nAdvancing to level %i", Entered_from_level+1
 
-int draw_stars_bg(newmenu *menu, d_event *event, grs_bitmap *background)
+int draw_stars_bg(newmenu *menu, d_event *event, void *userdata)
 {
 	menu = menu;
-	
+	userdata = userdata;
+
 	switch (event->type)
 	{
 		case EVENT_WINDOW_DRAW:
 			gr_set_current_canvas(NULL);
-			show_fullscr(background);
+			nm_draw_background1(STARS_BACKGROUND); // same loader as the menus: 24-bit or own palette, game palette untouched
 			break;
 			
 		default:
@@ -1283,24 +1284,16 @@ int draw_stars_bg(newmenu *menu, d_event *event, grs_bitmap *background)
 void do_screen_message(char *fmt, ...)
 {
 	va_list arglist;
-	grs_bitmap background;
 	char msg[1024];
-	
+
 	if (Game_mode & GM_MULTI)
 		return;
-	
-	gr_init_bitmap_data(&background);
-	if (pcx_read_bitmap(STARS_BACKGROUND, &background, BM_LINEAR, gr_palette) != PCX_ERROR_NONE)
-		return;
-
-	gr_palette_load(gr_palette);
 
 	va_start(arglist, fmt);
 	vsprintf(msg, fmt, arglist);
 	va_end(arglist);
-	
-	nm_messagebox1(NULL, (int (*)(newmenu *, d_event *, void *))draw_stars_bg, &background, 1, TXT_OK, msg);
-	gr_free_bitmap_data(&background);
+
+	nm_messagebox1(NULL, draw_stars_bg, NULL, 1, TXT_OK, msg);
 }
 
 //	-----------------------------------------------------------------------------------------------------

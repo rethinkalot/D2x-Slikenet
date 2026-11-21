@@ -60,6 +60,7 @@ static const char AspectYStr[] ="AspectY";
 static const char WindowModeStr[] ="WindowMode";
 static const char TexFiltStr[] ="TexFilt";
 static const char MovieTexFiltStr[] ="MovieTexFilt";
+static const char BriefingRobots3DStr[] ="BriefingRobots3D";
 static const char MovieSubtitlesStr[] ="MovieSubtitles";
 static const char VSyncStr[] ="VSync";
 static const char MultisampleStr[] ="Multisample";
@@ -71,6 +72,24 @@ static const char FPSIndicatorStr[] ="FPSIndicator";
 static const char GrabinputStr[] ="GrabInput";
 static const char BorderlessWindowStr[] ="BorderlessWindow";
 static const char GamePortStr[] ="GamePort";
+static const char ResCustomStr[] ="ResCustom";
+static const char ResFilterStr[] ="ResFilter";
+static const char ResExtra1Str[] ="ResExtra1";
+static const char ResExtra2Str[] ="ResExtra2";
+
+// "16x9" style pair from the config, 0 if not set
+static void config_read_pair(const char *value, int *a, int *b)
+{
+	const char *x = strchr(value, 'x');
+	*a = *b = 0;
+	if (x)
+	{
+		*a = strtol(value, NULL, 10);
+		*b = strtol(x + 1, NULL, 10);
+	}
+	if (*a <= 0 || *b <= 0)
+		*a = *b = 0;
+}
 
 int ReadConfigFile()
 {
@@ -108,13 +127,14 @@ int ReadConfigFile()
 	GameCfg.GammaLevel = 0;
 	memset(GameCfg.LastPlayer,0,CALLSIGN_LEN+1);
 	memset(GameCfg.LastMission,0,MISSION_NAME_LEN+1);
-	GameCfg.ResolutionX = 640;
-	GameCfg.ResolutionY = 480;
-	GameCfg.AspectX = 3;
-	GameCfg.AspectY = 4;
+	GameCfg.ResolutionX = 960; // default 960x540, 16:9
+	GameCfg.ResolutionY = 540;
+	GameCfg.AspectX = 9;
+	GameCfg.AspectY = 16;
 	GameCfg.WindowMode = 0;
 	GameCfg.TexFilt = 0;
 	GameCfg.MovieTexFilt = 0;
+	GameCfg.BriefingRobots3D = 1;
 	GameCfg.MovieSubtitles = 0;
 	GameCfg.VSync = 0;
 	GameCfg.Multisample = 0;
@@ -128,6 +148,9 @@ int ReadConfigFile()
 	GameCfg.Grabinput = 1;
 	GameCfg.BorderlessWindow = 0;
 	GameCfg.GamePort = 0;
+	GameCfg.ResCustom = 0;
+	GameCfg.ResFilterW = GameCfg.ResFilterH = 0;
+	GameCfg.ResExtra[0] = GameCfg.ResExtra[1] = 0;
 
 
 	infile = PHYSFSX_openReadBuffered("descent.cfg");
@@ -231,6 +254,8 @@ int ReadConfigFile()
 				GameCfg.TexFilt = strtol(value, NULL, 10);
 			else if (!strcmp(token, MovieTexFiltStr))
 				GameCfg.MovieTexFilt = strtol(value, NULL, 10);
+			else if (!strcmp(token, BriefingRobots3DStr))
+				GameCfg.BriefingRobots3D = strtol(value, NULL, 10);
 			else if (!strcmp(token, MovieSubtitlesStr))
 				GameCfg.MovieSubtitles = strtol(value, NULL, 10);
 			else if (!strcmp(token, VSyncStr))
@@ -253,6 +278,16 @@ int ReadConfigFile()
 				GameCfg.BorderlessWindow = strtol(value, NULL, 10);
 			else if (!strcmp(token, GamePortStr))
 				GameCfg.GamePort = strtol(value, NULL, 10);
+			else if (!strcmp(token, ResCustomStr))
+				GameCfg.ResCustom = strtol(value, NULL, 10);
+			else if (!strcmp(token, ResFilterStr))
+				config_read_pair(value, &GameCfg.ResFilterW, &GameCfg.ResFilterH);
+			else if (!strcmp(token, ResExtra1Str) || !strcmp(token, ResExtra2Str))
+			{
+				int w, h;
+				config_read_pair(value, &w, &h);
+				GameCfg.ResExtra[token[8] == '2'] = (w >= 320 && h >= 200) ? SM(w, h) : 0;
+			}
 		}
 		d_free(line);
 	}
@@ -304,6 +339,7 @@ int WriteConfigFile()
 	PHYSFSX_printf(infile, "%s=%i\n", WindowModeStr, GameCfg.WindowMode);
 	PHYSFSX_printf(infile, "%s=%i\n", TexFiltStr, GameCfg.TexFilt);
 	PHYSFSX_printf(infile, "%s=%i\n", MovieTexFiltStr, GameCfg.MovieTexFilt);
+	PHYSFSX_printf(infile, "%s=%i\n", BriefingRobots3DStr, GameCfg.BriefingRobots3D);
 	PHYSFSX_printf(infile, "%s=%i\n", MovieSubtitlesStr, GameCfg.MovieSubtitles);
 	PHYSFSX_printf(infile, "%s=%i\n", VSyncStr, GameCfg.VSync);
 	PHYSFSX_printf(infile, "%s=%i\n", MultisampleStr, GameCfg.Multisample);
@@ -315,6 +351,10 @@ int WriteConfigFile()
 	PHYSFSX_printf(infile, "%s=%i\n", GrabinputStr, GameCfg.Grabinput);
 	PHYSFSX_printf(infile, "%s=%i\n", BorderlessWindowStr, GameCfg.BorderlessWindow);
 	PHYSFSX_printf(infile, "%s=%i\n", GamePortStr, GameCfg.GamePort);
+	PHYSFSX_printf(infile, "%s=%i\n", ResCustomStr, GameCfg.ResCustom);
+	PHYSFSX_printf(infile, "%s=%ix%i\n", ResFilterStr, GameCfg.ResFilterW, GameCfg.ResFilterH);
+	PHYSFSX_printf(infile, "%s=%ix%i\n", ResExtra1Str, SM_W(GameCfg.ResExtra[0]), SM_H(GameCfg.ResExtra[0]));
+	PHYSFSX_printf(infile, "%s=%ix%i\n", ResExtra2Str, SM_W(GameCfg.ResExtra[1]), SM_H(GameCfg.ResExtra[1]));
 
 	PHYSFS_close(infile);
 

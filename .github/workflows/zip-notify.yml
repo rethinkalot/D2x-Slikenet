@@ -12,14 +12,9 @@ jobs:
           fetch-depth: 0
       - env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-          D1_REPO: https://github.com/rethinkalot/D1x-Slikenet.git
-          D1_URL: https://github.com/rethinkalot/D1x-Slikenet/raw/D1-SlikeNet-WorkBranch/download/D1x-Redux-SLikeNet.zip
-          D2_URL: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D2x-Redux-SLikeNet.zip
-          D1_MODELS: https://github.com/rethinkalot/D1x-Slikenet/raw/D1-SlikeNet-WorkBranch/download/D1x-Models-Textures.zip
-          D2_MODELS: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D2x-Models-Textures.zip
+          ZIP_URL: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D2x-Redux-SLikeNet.zip
+          MODELS_URL: https://github.com/${{ github.repository }}/raw/${{ github.ref_name }}/download/D2x-Models-Textures.zip
         run: |
-          # One post for both games (F7 pushes the D1 zip just before this one). D1's own workflow is manual only.
-          # New README titles of both, grouped by README section and tagged (D1 only) / (D2 only): .github/zip-notes.py
-          git clone -q --no-checkout --filter=blob:none -b D1-SlikeNet-WorkBranch "$D1_REPO" "$RUNNER_TEMP/d1"
-          msg=$(python3 .github/zip-notes.py "$RUNNER_TEMP/d1" . "$D1_URL" "$D2_URL" "$D1_MODELS" "$D2_MODELS")
-          jq -n --arg c "$msg" '{content: $c, username: "Dxx-SLikeNet", flags: 4}' | curl -sf -H "Content-Type: application/json" -d @- "$WEBHOOK"
+          # The D2x release post (F7 pushes D1, then D2; each game posts its own): .github/zip-notes.py
+          msg=$(python3 .github/zip-notes.py D2 "$ZIP_URL" "$MODELS_URL")
+          jq -n --arg c "$msg" '{content: $c, username: "D2x-SLikeNet", flags: 4}' | curl -sf -H "Content-Type: application/json" -d @- "$WEBHOOK"
